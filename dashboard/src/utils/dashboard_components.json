@@ -1,0 +1,311 @@
+{
+  "dashboard_components": {
+    "main_components": {
+      "DashboardContainer": {
+        "description": "Main container component that holds all dashboard elements",
+        "props": {
+          "company": "Company filter",
+          "fiscal_year": "Fiscal year filter",
+          "cost_center": "Cost center filter"
+        }
+      },
+      "DashboardTable": {
+        "description": "Main table component displaying budget vs actual vs forecast data",
+        "props": {
+          "data": "Table data array",
+          "loading": "Loading state",
+          "filters": "Active filters"
+        },
+        "features": [
+          "Sortable columns",
+          "Filterable rows",
+          "Export functionality",
+          "Print functionality"
+        ]
+      },
+      "DashboardFilters": {
+        "description": "Filter panel for company, fiscal year, cost center, etc.",
+        "components": [
+          "CompanySelector",
+          "FiscalYearSelector", 
+          "CostCenterSelector",
+          "DateRangeSelector",
+          "AccountTypeFilter"
+        ]
+      },
+      "DashboardSummary": {
+        "description": "Summary cards showing key metrics",
+        "cards": [
+          "TotalBudgetCard",
+          "TotalActualCard",
+          "TotalVarianceCard",
+          "YTDSummaryCard",
+          "ForecastSummaryCard"
+        ]
+      }
+    },
+    "table_components": {
+      "TableHeader": {
+        "description": "Table header with column titles and sorting",
+        "columns": [
+          "OtherExpensesColumn",
+          "LastYearSection",
+          "YearToDateSection", 
+          "ForecastSection"
+        ]
+      },
+      "TableRow": {
+        "description": "Individual table row component",
+        "cells": [
+          "ExpenseNameCell",
+          "BudgetCell",
+          "ActualCell",
+          "RatioCell",
+          "ComparisonCell"
+        ]
+      },
+      "TableCell": {
+        "description": "Individual cell component with formatting",
+        "types": [
+          "CurrencyCell",
+          "PercentageCell",
+          "RatioCell",
+          "TextCell"
+        ]
+      },
+      "TablePagination": {
+        "description": "Pagination component for large datasets"
+      }
+    },
+    "data_components": {
+      "BudgetDataFetcher": {
+        "description": "Component to fetch budget data from Budget doctype",
+        "api_endpoints": [
+          "GET /api/method/yearly_income_statement.api.get_budget_data"
+        ]
+      },
+      "ActualDataFetcher": {
+        "description": "Component to fetch actual data from GL Entry",
+        "api_endpoints": [
+          "GET /api/method/yearly_income_statement.api.get_actual_data"
+        ]
+      },
+      "ForecastDataFetcher": {
+        "description": "Component to fetch or calculate forecast data",
+        "api_endpoints": [
+          "GET /api/method/yearly_income_statement.api.get_forecast_data"
+        ]
+      },
+      "DataAggregator": {
+        "description": "Component to aggregate and calculate ratios",
+        "calculations": [
+          "actual_budget_ratio",
+          "year_comparison_ratio",
+          "ytd_calculations",
+          "forecast_calculations"
+        ]
+      }
+    },
+    "filter_components": {
+      "CompanySelector": {
+        "description": "Dropdown to select company",
+        "props": {
+          "value": "Selected company",
+          "onChange": "Change handler"
+        }
+      },
+      "FiscalYearSelector": {
+        "description": "Dropdown to select fiscal year",
+        "props": {
+          "value": "Selected fiscal year",
+          "onChange": "Change handler"
+        }
+      },
+      "CostCenterSelector": {
+        "description": "Multi-select dropdown for cost centers",
+        "props": {
+          "value": "Selected cost centers",
+          "onChange": "Change handler",
+          "multiple": true
+        }
+      },
+      "DateRangeSelector": {
+        "description": "Date range picker for custom periods",
+        "props": {
+          "startDate": "Start date",
+          "endDate": "End date",
+          "onChange": "Change handler"
+        }
+      },
+      "AccountTypeFilter": {
+        "description": "Filter for expense account types",
+        "options": [
+          "Direct Expense",
+          "Indirect Expense",
+          "Cost of Goods Sold",
+          "Depreciation"
+        ]
+      }
+    },
+    "chart_components": {
+      "BudgetVsActualChart": {
+        "description": "Chart showing budget vs actual comparison",
+        "type": "Bar chart or Line chart"
+      },
+      "VarianceChart": {
+        "description": "Chart showing budget variances",
+        "type": "Waterfall chart"
+      },
+      "TrendChart": {
+        "description": "Chart showing trends over time",
+        "type": "Line chart"
+      },
+      "ForecastChart": {
+        "description": "Chart showing forecast projections",
+        "type": "Line chart with projections"
+      }
+    },
+    "summary_components": {
+      "SummaryCard": {
+        "description": "Reusable card component for summary metrics",
+        "props": {
+          "title": "Card title",
+          "value": "Metric value",
+          "change": "Change from previous period",
+          "type": "positive/negative/neutral"
+        }
+      },
+      "TotalBudgetCard": {
+        "description": "Card showing total budget amount"
+      },
+      "TotalActualCard": {
+        "description": "Card showing total actual amount"
+      },
+      "TotalVarianceCard": {
+        "description": "Card showing total variance (budget - actual)"
+      },
+      "YTDSummaryCard": {
+        "description": "Card showing year-to-date summary"
+      },
+      "ForecastSummaryCard": {
+        "description": "Card showing forecast summary"
+      }
+    },
+    "utility_components": {
+      "LoadingSpinner": {
+        "description": "Loading indicator component"
+      },
+      "ErrorMessage": {
+        "description": "Error message display component"
+      },
+      "EmptyState": {
+        "description": "Empty state when no data is available"
+      },
+      "ExportButton": {
+        "description": "Button to export table data to Excel/CSV"
+      },
+      "PrintButton": {
+        "description": "Button to print the dashboard"
+      },
+      "RefreshButton": {
+        "description": "Button to refresh data"
+      }
+    },
+    "formatting_components": {
+      "CurrencyFormatter": {
+        "description": "Component to format currency values",
+        "props": {
+          "value": "Numeric value",
+          "currency": "Currency code",
+          "precision": "Decimal places"
+        }
+      },
+      "PercentageFormatter": {
+        "description": "Component to format percentage values",
+        "props": {
+          "value": "Numeric value",
+          "precision": "Decimal places"
+        }
+      },
+      "RatioFormatter": {
+        "description": "Component to format ratio values",
+        "props": {
+          "value": "Ratio value",
+          "format": "Display format"
+        }
+      },
+      "ConditionalFormatter": {
+        "description": "Component to apply conditional formatting",
+        "props": {
+          "value": "Value to format",
+          "thresholds": "Color thresholds",
+          "type": "positive/negative/neutral"
+        }
+      }
+    },
+    "modal_components": {
+      "FilterModal": {
+        "description": "Modal for advanced filtering options"
+      },
+      "DetailsModal": {
+        "description": "Modal to show detailed breakdown of a row"
+      },
+      "ExportModal": {
+        "description": "Modal for export options"
+      }
+    },
+    "layout_components": {
+      "DashboardLayout": {
+        "description": "Main layout component",
+        "sections": [
+          "Header",
+          "Filters",
+          "Summary",
+          "Table",
+          "Charts"
+        ]
+      },
+      "ResponsiveGrid": {
+        "description": "Responsive grid for summary cards"
+      },
+      "Sidebar": {
+        "description": "Sidebar for filters and navigation"
+      }
+    }
+  },
+  "component_hierarchy": {
+    "DashboardContainer": {
+      "children": [
+        "DashboardHeader",
+        "DashboardFilters", 
+        "DashboardSummary",
+        "DashboardTable",
+        "DashboardCharts"
+      ]
+    },
+    "DashboardTable": {
+      "children": [
+        "TableHeader",
+        "TableBody",
+        "TablePagination"
+      ]
+    },
+    "TableBody": {
+      "children": [
+        "TableRow"
+      ]
+    },
+    "TableRow": {
+      "children": [
+        "TableCell"
+      ]
+    }
+  },
+  "data_flow": {
+    "1_filters": "User selects filters",
+    "2_fetch": "Components fetch data from APIs",
+    "3_aggregate": "DataAggregator processes and calculates",
+    "4_display": "Components display formatted data",
+    "5_interact": "User interacts with table/charts"
+  }
+} 

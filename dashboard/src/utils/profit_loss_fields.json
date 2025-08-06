@@ -1,0 +1,153 @@
+{
+  "profit_loss_statement": {
+    "report_config": {
+      "name": "Profit and Loss Statement",
+      "doctype": "Report",
+      "ref_doctype": "GL Entry",
+      "report_type": "Script Report",
+      "module": "Accounts",
+      "roles": [
+        "Accounts User",
+        "Accounts Manager", 
+        "Auditor"
+      ]
+    },
+    "filters": {
+      "company": "Company",
+      "from_fiscal_year": "Fiscal Year (From)",
+      "to_fiscal_year": "Fiscal Year (To)", 
+      "period_start_date": "Period Start Date",
+      "period_end_date": "Period End Date",
+      "filter_based_on": "Filter Based On",
+      "periodicity": "Periodicity",
+      "accumulated_values": "Accumulated Values",
+      "include_default_book_entries": "Include Default FB Entries",
+      "selected_view": "Select View",
+      "presentation_currency": "Presentation Currency"
+    },
+    "data_structure": {
+      "income": {
+        "root_type": "Income",
+        "balance_must_be": "Credit",
+        "accounts": "Income accounts from Chart of Accounts",
+        "gl_entries": "General Ledger entries with credit amounts"
+      },
+      "expense": {
+        "root_type": "Expense", 
+        "balance_must_be": "Debit",
+        "accounts": "Expense accounts from Chart of Accounts",
+        "gl_entries": "General Ledger entries with debit amounts"
+      },
+      "net_profit_loss": {
+        "calculation": "Total Income - Total Expense",
+        "label": "Profit for the year"
+      }
+    }
+  },
+  "account_fields": {
+    "account": {
+      "name": "Account name",
+      "account_name": "Display name",
+      "account_number": "Account number",
+      "account_type": "Account type (Income, Expense, etc.)",
+      "root_type": "Root type (Income, Expense, Asset, Liability, Equity)",
+      "report_type": "Report type (Profit and Loss, Balance Sheet)",
+      "balance_must_be": "Debit or Credit",
+      "company": "Company",
+      "disabled": "Account disabled flag",
+      "freeze_account": "Freeze account flag",
+      "include_in_gross": "Include in gross calculation",
+      "is_group": "Is group account",
+      "parent_account": "Parent account",
+      "account_currency": "Account currency",
+      "tax_rate": "Tax rate"
+    }
+  },
+  "gl_entry_fields": {
+    "gl_entry": {
+      "name": "GL Entry name",
+      "account": "Account",
+      "account_currency": "Account currency",
+      "against": "Against field",
+      "against_voucher": "Against voucher",
+      "against_voucher_type": "Against voucher type",
+      "company": "Company",
+      "cost_center": "Cost center",
+      "credit": "Credit amount",
+      "credit_in_account_currency": "Credit in account currency",
+      "credit_in_transaction_currency": "Credit in transaction currency",
+      "debit": "Debit amount",
+      "debit_in_account_currency": "Debit in account currency",
+      "debit_in_transaction_currency": "Debit in transaction currency",
+      "due_date": "Due date",
+      "finance_book": "Finance book",
+      "fiscal_year": "Fiscal year",
+      "is_advance": "Is advance entry",
+      "is_cancelled": "Is cancelled",
+      "is_opening": "Is opening entry",
+      "party": "Party",
+      "party_type": "Party type",
+      "posting_date": "Posting date",
+      "project": "Project",
+      "remarks": "Remarks",
+      "transaction_currency": "Transaction currency",
+      "transaction_date": "Transaction date",
+      "transaction_exchange_rate": "Transaction exchange rate",
+      "voucher_detail_no": "Voucher detail number",
+      "voucher_no": "Voucher number",
+      "voucher_subtype": "Voucher subtype",
+      "voucher_type": "Voucher type"
+    }
+  },
+  "chart_data_structure": {
+    "labels": "Period labels (e.g., Jan 2024, Feb 2024)",
+    "datasets": [
+      {
+        "name": "Income",
+        "values": "Income amounts for each period"
+      },
+      {
+        "name": "Expense", 
+        "values": "Expense amounts for each period"
+      },
+      {
+        "name": "Net Profit/Loss",
+        "values": "Net profit/loss for each period"
+      }
+    ],
+    "chart_type": "bar or line",
+    "fieldtype": "Currency",
+    "currency": "Presentation currency"
+  },
+  "report_summary": {
+    "total_income": "Sum of all income amounts",
+    "total_expense": "Sum of all expense amounts", 
+    "net_profit": "Total Income - Total Expense",
+    "currency": "Presentation currency",
+    "indicators": {
+      "green": "Positive net profit",
+      "red": "Negative net profit"
+    }
+  },
+  "period_structure": {
+    "from_date": "Period start date",
+    "to_date": "Period end date", 
+    "key": "Period key (e.g., jan_2024)",
+    "label": "Period label (e.g., Jan 2024)",
+    "periodicity": "Yearly, Quarterly, Monthly, Half-Yearly"
+  },
+  "account_types_for_pl": {
+    "income_accounts": [
+      "Direct Income",
+      "Indirect Income",
+      "Income Account"
+    ],
+    "expense_accounts": [
+      "Direct Expense", 
+      "Indirect Expense",
+      "Expense Account",
+      "Cost of Goods Sold",
+      "Depreciation"
+    ]
+  }
+} 

@@ -1,0 +1,140 @@
+{
+  "dashboard_table_structure": {
+    "description": "Dashboard table with Other Expenses as first column, followed by budget, actual, and forecast data for different time periods",
+    "columns": {
+      "first_column": "Other Expenses (Account/Cost Center)",
+      "year_sections": {
+        "last_year": {
+          "budget": "Last Year Budget",
+          "actual": "Last Year Actual", 
+          "act_bud": "Actual/Budget Ratio",
+          "this_year": "This Year Actual",
+          "act_last_year": "This Year/Last Year Ratio"
+        },
+        "year_to_date": {
+          "budget": "YTD Budget",
+          "actual": "YTD Actual",
+          "act_bud": "YTD Actual/Budget Ratio", 
+          "this_year": "This Year YTD Actual",
+          "act_last_year": "YTD This Year/Last Year Ratio"
+        },
+        "forecast": {
+          "budget": "Forecast Budget",
+          "actual": "Forecast Actual",
+          "act_bud": "Forecast Actual/Budget Ratio",
+          "this_year": "This Year Forecast Actual", 
+          "act_last_year": "Forecast This Year/Last Year Ratio"
+        }
+      }
+    }
+  },
+  "data_sources": {
+    "budget_data": {
+      "doctype": "Budget",
+      "fields": {
+        "name": "Budget name",
+        "budget_against": "Cost Center or Project",
+        "company": "Company",
+        "cost_center": "Cost Center (if budget_against is Cost Center)",
+        "project": "Project (if budget_against is Project)",
+        "fiscal_year": "Fiscal Year",
+        "monthly_distribution": "Monthly Distribution",
+        "accounts": "Budget Account table"
+      },
+      "budget_account_table": {
+        "doctype": "Budget Account",
+        "fields": {
+          "account": "Account reference",
+          "budget_amount": "Budget amount for the account"
+        }
+      }
+    },
+    "actual_data": {
+      "primary_source": "GL Entry",
+      "fields": {
+        "account": "Account",
+        "cost_center": "Cost Center",
+        "debit": "Debit amount",
+        "credit": "Credit amount",
+        "posting_date": "Posting date",
+        "fiscal_year": "Fiscal year",
+        "company": "Company",
+        "voucher_type": "Journal Entry, Sales Invoice, etc.",
+        "voucher_no": "Voucher number"
+      },
+      "account_data": {
+        "doctype": "Account",
+        "fields": {
+          "name": "Account name",
+          "account_name": "Display name",
+          "root_type": "Income, Expense, Asset, Liability, Equity",
+          "report_type": "Profit and Loss, Balance Sheet",
+          "account_type": "Direct Income, Indirect Income, Direct Expense, Indirect Expense",
+          "is_group": "Is group account",
+          "parent_account": "Parent account"
+        }
+      },
+      "cost_center_data": {
+        "doctype": "Cost Center",
+        "fields": {
+          "name": "Cost center name",
+          "cost_center_name": "Display name",
+          "cost_center_number": "Cost center number",
+          "parent_cost_center": "Parent cost center",
+          "company": "Company",
+          "is_group": "Is group cost center"
+        }
+      }
+    },
+    "forecast_data": {
+      "note": "Forecast data may need to be calculated or stored in custom doctypes",
+      "possible_sources": [
+        "Custom Forecast doctype",
+        "Calculated from historical data",
+        "Budget with forecast adjustments"
+      ]
+    }
+  },
+  "calculations": {
+    "actual_budget_ratio": "Actual Amount / Budget Amount",
+    "year_comparison_ratio": "This Year Amount / Last Year Amount",
+    "ytd_calculation": "Year to Date (from fiscal year start to current date)",
+    "forecast_calculation": "Projected amounts based on trends or manual input"
+  },
+  "filters": {
+    "company": "Company filter",
+    "fiscal_year": "Fiscal year filter",
+    "cost_center": "Cost center filter",
+    "account_type": "Account type filter (for expense accounts)",
+    "date_range": "Date range filter for actual data"
+  },
+  "account_types_for_expenses": [
+    "Direct Expense",
+    "Indirect Expense", 
+    "Expense Account",
+    "Cost of Goods Sold",
+    "Depreciation"
+  ],
+  "sample_query_structure": {
+    "budget_query": "SELECT account, budget_amount FROM `tabBudget Account` WHERE parent IN (SELECT name FROM `tabBudget` WHERE company = %s AND fiscal_year = %s)",
+    "actual_query": "SELECT account, cost_center, SUM(debit) as actual_amount FROM `tabGL Entry` WHERE company = %s AND fiscal_year = %s AND posting_date BETWEEN %s AND %s GROUP BY account, cost_center",
+    "forecast_query": "SELECT account, cost_center, forecast_amount FROM `tabForecast` WHERE company = %s AND fiscal_year = %s"
+  },
+  "dashboard_implementation": {
+    "data_fetching": {
+      "budget_data": "Fetch from Budget and Budget Account doctypes",
+      "actual_data": "Fetch from GL Entry doctype with account and cost center filters",
+      "forecast_data": "Fetch from custom forecast doctype or calculate from trends"
+    },
+    "calculations": {
+      "ratios": "Calculate actual/budget and year-over-year ratios",
+      "ytd_totals": "Sum actual amounts from fiscal year start to current date",
+      "forecast_totals": "Sum forecast amounts for the period"
+    },
+    "display": {
+      "table_structure": "Other Expenses column + 5 columns per time period (Last Year, YTD, Forecast)",
+      "formatting": "Currency formatting, percentage formatting for ratios",
+      "conditional_formatting": "Color coding for budget variances"
+    }
+  }
+} 
