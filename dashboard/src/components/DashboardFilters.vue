@@ -36,14 +36,16 @@
                         <Calendar class="h-4 w-4" />
                         Fiscal Year
                       </Label>
-                      <Input 
+                      <select 
                         v-model="selectedYear" 
-                        type="text" 
-                        placeholder="Enter year (e.g., 2023)"
-                        class="border-table-border focus:ring-primary w-full"
-                        @keyup.enter="handleYearChange(selectedYear)"
-                        @input="handleYearChange(selectedYear)"
-                      />
+                        @change="handleYearChange(selectedYear)"
+                        class="w-full px-3 py-2 border border-table-border rounded-md focus:ring-primary focus:border-primary bg-background text-foreground"
+                      >
+                        <option value="">Select fiscal year</option>
+                        <option v-for="fiscalYear in fiscalYears" :key="fiscalYear" :value="fiscalYear">
+                          {{ fiscalYear }}
+                        </option>
+                      </select>
                     </div>
                     
                     <div class="space-y-2">
@@ -89,7 +91,19 @@
                       </select>
                     </div>
                     
-                    <div class="flex items-end">
+                    <div class="flex flex-col space-y-2">
+                      <div class="flex items-center space-x-2">
+                        <input
+                          id="global-hide-zeros"
+                          type="checkbox"
+                          v-model="hideZeroRows"
+                          @change="handleHideZerosChange"
+                          class="h-5 w-5 text-primary"
+                        />
+                        <label for="global-hide-zeros" class="text-sm cursor-pointer text-dashboard-subheader">
+                          Hide Zero Rows
+                        </label>
+                      </div>
                       <Button 
                         variant="outline" 
                         @click="clearFilters"
@@ -137,20 +151,22 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['filtersChange', 'refresh', 'export'])
+const emit = defineEmits(['filtersChange', 'refresh', 'export', 'hideZerosChange'])
 
 // State
-const selectedYear = ref('2023') // Default to 2023
+const selectedYear = ref('') // Default to empty until fiscal years are loaded
 const selectedMonth = ref('') // Default to no month selected
 const selectedCostCenter = ref('') // Default to no cost center selected
 const costCenters = ref([]) // List of available cost centers
+const fiscalYears = ref([]) // List of available fiscal years
+const hideZeroRows = ref(false) // Global hide zero rows toggle
 
 // Methods
 const handleYearChange = (year) => {
+  console.log('Year changed to:', year)
+  selectedYear.value = year
   if (!year || year.trim() === '') return
   
-  console.log('Year changed to:', year)
-  selectedYear.value = year.trim()
   const filters = { 
     fiscal_year: year.trim(),
     month: selectedMonth.value || undefined,
@@ -190,7 +206,14 @@ const clearFilters = () => {
   selectedYear.value = ''
   selectedMonth.value = ''
   selectedCostCenter.value = ''
+  hideZeroRows.value = false
   emit('filtersChange', {})
+  emit('hideZerosChange', false)
+}
+
+const handleHideZerosChange = () => {
+  console.log('Hide zeros changed to:', hideZeroRows.value)
+  emit('hideZerosChange', hideZeroRows.value)
 }
 
 const getMonthName = (monthNumber) => {
@@ -221,14 +244,30 @@ const loadCostCenters = async () => {
   }
 }
 
+// Load fiscal years from API
+const loadFiscalYears = async () => {
+  try {
+    const fiscalYearsData = await apiService.getFiscalYears()
+    fiscalYears.value = fiscalYearsData || []
+    console.log('Loaded fiscal years:', fiscalYears.value)
+    
+    // Set default to the most recent fiscal year if available
+    if (fiscalYears.value.length > 0 && !selectedYear.value) {
+      selectedYear.value = fiscalYears.value[0]
+      handleYearChange(selectedYear.value)
+    }
+  } catch (error) {
+    console.error('Failed to load fiscal years:', error)
+    fiscalYears.value = []
+  }
+}
+
 // Trigger initial year selection on mount
 onMounted(async () => {
+  // Load fiscal years first
+  await loadFiscalYears()
+  
   // Load cost centers
   await loadCostCenters()
-  
-  // Trigger initial year selection
-  if (selectedYear.value) {
-    handleYearChange(selectedYear.value)
-  }
 })
 </script> 

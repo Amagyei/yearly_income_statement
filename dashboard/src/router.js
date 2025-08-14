@@ -17,6 +17,16 @@ const routes = [
 		path: "/dashboard",
 		component: () => import("@/components/Dashboard.vue"),
 	},
+	{
+		name: "TestPage",
+		path: "/test",
+		component: () => import("@/views/TestPage.vue"),
+	},
+	{
+		name: "ErpnextDashboard",
+		path: "/erpnext-dashboard",
+		component: () => import("@/views/ErpnextDashboard.vue"),
+	},
 ]
 
 const router = createRouter({

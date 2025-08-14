@@ -26,6 +26,22 @@
             Export
           </Button>
           <Button 
+            variant="outline"
+            @click="goToTestPage"
+            class="flex items-center gap-2"
+          >
+            <TestTube class="h-4 w-4" />
+            Test API
+          </Button>
+          <Button 
+            variant="outline"
+            @click="goToErpnextDashboard"
+            class="flex items-center gap-2"
+          >
+            <BarChart3 class="h-4 w-4" />
+            ERPNext Dashboard
+          </Button>
+          <Button 
             variant="outline" 
             @click="logout"
             class="flex items-center gap-2"
@@ -40,6 +56,7 @@
         @filters-change="handleFiltersChange"
         @refresh="refreshData"
         @export="exportData"
+        @hide-zeros-change="handleHideZerosChange"
       />
 
       <!-- Loading State -->
@@ -75,6 +92,7 @@
           :filters="currentFilters"
           :data="dashboardData"
           :summary-data="summaryData"
+          :hide-zero-rows="globalHideZeroRows"
         />
       </div>
 
@@ -105,7 +123,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Button } from '@/components/ui'
-import { RefreshCw, Download, AlertCircle, BarChart3 } from 'lucide-vue-next'
+import { RefreshCw, Download, AlertCircle, BarChart3, TestTube } from 'lucide-vue-next'
 import DashboardFilters from './DashboardFilters.vue'
 import DashboardTable from './DashboardTable.vue'
 import apiService from '../services/api'
@@ -116,7 +134,8 @@ const loading = ref(false)
 const error = ref(null)
 const dashboardData = ref([])
 const summaryData = ref({})
-const currentFilters = ref({ fiscal_year: '2023' }) 
+const currentFilters = ref({}) 
+const globalHideZeroRows = ref(false) // Global hide zero rows state
 
 // Debug mode (development only)
 const showDebug = ref(false)
@@ -136,6 +155,14 @@ const logout = () => {
   router.push('/login')
 }
 
+const goToTestPage = () => {
+  router.push('/test')
+}
+
+const goToErpnextDashboard = () => {
+  router.push('/erpnext-dashboard')
+}
+
 // Methods
 const handleFiltersChange = (filters) => {
   console.log('Filters changed:', filters)
@@ -143,6 +170,11 @@ const handleFiltersChange = (filters) => {
   currentFilters.value = { ...currentFilters.value, ...filters }
   console.log('Updated filters:', currentFilters.value)
   loadDashboardData()
+}
+
+const handleHideZerosChange = (hideZeros) => {
+  console.log('Global hide zeros changed:', hideZeros)
+  globalHideZeroRows.value = hideZeros
 }
 
 const loadDashboardData = async () => {
