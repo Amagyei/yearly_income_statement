@@ -1,0 +1,1593 @@
+<template>
+  <div class="space-y-6">
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <Card class="bg-gradient-card border-table-border">
+        <CardContent class="p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-muted-foreground">Total Budget</p>
+              <p class="text-2xl font-bold text-dashboard-header">{{ formatCurrency(summaryData.totalBudget) }}</p>
+            </div>
+            <DollarSign class="h-8 w-8 text-primary" />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card class="bg-gradient-card border-table-border">
+        <CardContent class="p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-muted-foreground">Total Actual</p>
+              <p class="text-2xl font-bold text-dashboard-header">{{ formatCurrency(summaryData.totalActual) }}</p>
+            </div>
+            <BarChart3 class="h-8 w-8 text-primary" />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card class="bg-gradient-card border-table-border">
+        <CardContent class="p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-muted-foreground">Variance</p>
+              <p class="text-2xl font-bold text-dashboard-header">{{ formatCurrency(summaryData.variance) }}</p>
+            </div>
+            <TrendingUp class="h-8 w-8 text-primary" />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card class="bg-gradient-card border-table-border">
+        <CardContent class="p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-muted-foreground">Variance %</p>
+              <p class="text-2xl font-bold text-dashboard-header">{{ formatPercentage(summaryData.variancePercentage) }}</p>
+            </div>
+            <PieChart class="h-8 w-8 text-primary" />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+
+    <!-- Income & Expenses Table -->
+    <Card class="bg-gradient-card shadow-dashboard-lg border-table-border">
+      <CardHeader class="flex items-center justify-between px-4 py-2">
+        <div class="flex items-center space-x-3">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            @click="minimizeIncome = !minimizeIncome"
+            class="p-1"
+          >
+            {{ minimizeIncome ? '▶' : '▼' }}
+          </Button>
+          <CardTitle class="text-dashboard-header font-bold text-lg">Income & Expenses</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent class="p-0" v-if="!minimizeIncome">
+        <div class="overflow-x-auto">
+          <Table>
+            <TableHeader class="bg-table-header">
+              <TableRow class="border-table-border">
+                <TableHead class="w-auto min-w-[200px] max-w-[800px] border-r border-table-border sticky left-0 bg-table-header z-10 whitespace-nowrap">
+                  <Button 
+                    variant="ghost" 
+                    @click="handleSort('category')"
+                    class="h-auto p-0 font-semibold text-dashboard-header hover:bg-transparent"
+                  >
+                    <ArrowUpDown class="h-4 w-4" />
+                  </Button>
+                </TableHead>
+                
+                <!-- Current Month Section -->
+                <TableHead colSpan="5" class="text-center border-r border-table-border bg-primary/5">
+                  <div class="text-dashboard-header font-semibold">Current Month</div>
+                </TableHead>
+                
+                <!-- Year to Date Section -->
+                <TableHead colSpan="5" class="text-center border-r border-table-border bg-success/5">
+                  <div class="text-dashboard-header font-semibold">Year to Date</div>
+                </TableHead>
+                
+                <!-- Forecast Section -->
+                <TableHead colSpan="5" class="text-center bg-warning/5">
+                  <div class="text-dashboard-header font-semibold">Forecast</div>
+                </TableHead>
+              </TableRow>
+              
+              <TableRow class="border-table-border">
+                <TableHead class="border-r border-table-border sticky left-0 bg-table-header z-10"></TableHead>
+                
+                <!-- Current Month Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`cm-${idx}`" 
+                  class="text-center border-r border-table-border text-dashboard-subheader py-1"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+                
+                <!-- Year to Date Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`ytd-${idx}`" 
+                  class="text-center border-r border-table-border text-dashboard-subheader py-1"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+                
+                <!-- Forecast Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`fc-${idx}`" 
+                  :class="`text-center text-dashboard-subheader py-1 ${idx < 4 ? 'border-r border-table-border' : ''}`"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            
+            <TableBody>
+              <!-- INCOME SECTION -->
+              <!-- Data Structure Debug (temporary) -->
+                            <!-- Debug Row - Show Backend Data Structure -->
+              <TableRow class="bg-gray-100">
+                <TableCell :colspan="16" class="text-xs text-gray-600 p-2">
+                  <strong>BACKEND DATA STRUCTURE:</strong>
+                  Total Rows: {{ (props.data || []).length }} |
+                  Income: {{ (props.data || []).filter(row => row.root_type === 'Income').length }} |
+                  Expense: {{ (props.data || []).filter(row => row.root_type === 'Expense').length }}
+                  <br>
+                  <strong>Row Types:</strong>
+                  Headers: {{ (props.data || []).filter(row => row.type === 'header').length }} |
+                  Sub Headers: {{ (props.data || []).filter(row => row.type === 'sub_header').length }} |
+                  Accounts: {{ (props.data || []).filter(row => row.type === 'account').length }} |
+                  Totals: {{ (props.data || []).filter(row => row.type === 'total').length }}
+                  <br>
+                  <strong>Sample Data:</strong>
+                  {{ (props.data || []).slice(0, 3).map(row => `${row.type}:${row.category || row.account}`).join(', ') }}
+                </TableCell>
+              </TableRow>
+              
+              <!-- Simple Data Display - Use Backend Structure Directly -->
+              <template v-for="row in (props.data || [])" :key="`${row.type}-${row.category || row.account}`">
+                <TableRow :class="getRowClass(row)">
+                  <TableCell :class="getCategoryCellClass(row)" :style="{ paddingLeft: `${(row.indent || 0) * 20}px` }">
+                    {{ getCategoryDisplay(row) }}
+                  </TableCell>
+                  
+                  <!-- Current Month Data -->
+                  <TableCell class="text-right font-medium py-1">
+                    {{ formatCurrency(row?.currentMonth?.lastYear || 0) }}
+                  </TableCell>
+                  <TableCell class="text-right font-medium py-1">
+                    {{ formatCurrency(row?.currentMonth?.budget || 0) }}
+                  </TableCell>
+                  <TableCell class="text-right font-medium py-1">
+                    {{ formatCurrency(row?.currentMonth?.actual || 0) }}
+                  </TableCell>
+                  <TableCell class="text-right py-1">
+                    <span :class="getPercentageClass(row?.currentMonth?.actBudThisYear)" class="block text-right">
+                      {{ typeof row?.currentMonth?.actBudThisYear === 'string' ? row?.currentMonth?.actBudThisYear : formatPercentage(row?.currentMonth?.actBudThisYear) }}
+                    </span>
+                  </TableCell>
+                  <TableCell class="text-right py-1">
+                    <span :class="getPercentageClass(row?.currentMonth?.actVsLastYear)" class="block text-right">
+                      {{ typeof row?.currentMonth?.actVsLastYear === 'string' ? row?.currentMonth?.actVsLastYear : formatPercentage(row?.currentMonth?.actVsLastYear) }}
+                    </span>
+                  </TableCell>
+                  
+                  <!-- Year to Date Data -->
+                  <TableCell class="text-right font-medium py-1">
+                    {{ formatCurrency(row?.yearToDate?.lastYear || 0) }}
+                  </TableCell>
+                  <TableCell class="text-right font-medium py-1">
+                    {{ formatCurrency(row?.yearToDate?.budget || 0) }}
+                  </TableCell>
+                  <TableCell class="text-right font-medium py-1">
+                    {{ formatCurrency(row?.yearToDate?.actual || 0) }}
+                  </TableCell>
+                  <TableCell class="text-right py-1">
+                    <span :class="getPercentageClass(row?.yearToDate?.actBudThisYear)" class="block text-right">
+                      {{ typeof row?.yearToDate?.actBudThisYear === 'string' ? row?.yearToDate?.actBudThisYear : formatPercentage(row?.yearToDate?.actBudThisYear) }}
+                    </span>
+                  </TableCell>
+                  <TableCell class="text-right py-1">
+                    <span :class="getPercentageClass(row?.yearToDate?.actVsLastYear)" class="block text-right">
+                      {{ typeof row?.yearToDate?.actVsLastYear === 'string' ? row?.yearToDate?.actVsLastYear : formatPercentage(row?.yearToDate?.actVsLastYear) }}
+                    </span>
+                  </TableCell>
+                  <!-- Forecast Data -->
+                  <TableCell class="text-right font-medium py-1">
+                    {{ formatCurrency(row?.forecast?.lastYear || 0) }}
+                  </TableCell>
+                  <TableCell class="text-right font-medium py-1">
+                    {{ formatCurrency(row?.forecast?.budget || 0) }}
+                  </TableCell>
+                  <TableCell class="text-right font-medium py-1">
+                    {{ formatCurrency(row?.forecast?.actual || 0) }}
+                  </TableCell>
+                  <TableCell class="text-right py-1">
+                    <span :class="getPercentageClass(row?.forecast?.actBudThisYear)" class="block text-right">
+                      {{ typeof row?.forecast?.actBudThisYear === 'string' ? row?.forecast?.actBudThisYear : formatPercentage(row?.forecast?.actBudThisYear) }}
+                    </span>
+                  </TableCell>
+                  <TableCell class="text-right py-1">
+                    <span :class="getPercentageClass(row?.forecast?.actVsLastYear)" class="block text-right">
+                      {{ typeof row?.forecast?.actVsLastYear === 'string' ? row?.forecast?.actVsLastYear : formatPercentage(row?.forecast?.actVsLastYear) }}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              </template>
+              
+              <!-- Final Revenue Totals Row -->
+              <TableRow class="border-t-2 border-primary bg-primary/10 font-bold">
+                <TableCell class="font-bold border-r border-table-border sticky left-0 bg-primary/10 z-10 py-3">
+                  TOTAL REVENUE
+                </TableCell>
+                <!-- Current Month Totals -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.currentMonth?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.currentMonth?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.currentMonth?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Year to Date Totals -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.yearToDate?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.yearToDate?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.yearToDate?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Forecast Totals -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.forecast?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.forecast?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.forecast?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+              </TableRow>
+              
+              <!-- End of Simple Data Display -->
+                  <TableCell class="text-right font-medium py-1">
+                    {{ formatCurrency(row?.currentMonth?.budget || 0) }}
+                  </TableCell>
+                  <TableCell class="text-right font-medium py-1">
+                    {{ formatCurrency(row?.currentMonth?.actual || 0) }}
+                  </TableCell>
+                  <TableCell class="text-right py-1">
+                    <span :class="getPercentageClass(row?.currentMonth?.actBudThisYear)" class="block text-right">
+                      {{ typeof row?.currentMonth?.actBudThisYear === 'string' ? row?.currentMonth?.actBudThisYear : formatPercentage(row?.currentMonth?.actBudThisYear) }}
+                    </span>
+                  </TableCell>
+                  <TableCell class="text-right py-1">
+                    <span :class="getPercentageClass(row?.currentMonth?.actVsLastYear)" class="block text-right">
+                      {{ typeof row?.currentMonth?.actVsLastYear === 'string' ? row?.currentMonth?.actVsLastYear : formatPercentage(row?.currentMonth?.actVsLastYear) }}
+                    </span>
+                  </TableCell>
+                  <!-- Year to Date Data -->
+                  <TableCell class="text-right font-medium py-1">
+                    {{ formatCurrency(row?.yearToDate?.lastYear || 0) }}
+                  </TableCell>
+                  <TableCell class="text-right font-medium py-1">
+                    {{ formatCurrency(row?.yearToDate?.budget || 0) }}
+                  </TableCell>
+                  <TableCell class="text-right font-medium py-1">
+                    {{ formatCurrency(row?.yearToDate?.actual || 0) }}
+                  </TableCell>
+                  <TableCell class="text-right py-1">
+                    <span :class="getPercentageClass(row?.yearToDate?.actBudThisYear)" class="block text-right">
+                      {{ typeof row?.yearToDate?.actBudThisYear === 'string' ? row?.yearToDate?.actBudThisYear : formatPercentage(row?.yearToDate?.actBudThisYear) }}
+                    </span>
+                  </TableCell>
+                  <TableCell class="text-right py-1">
+                    <span :class="getPercentageClass(row?.yearToDate?.actVsLastYear)" class="block text-right">
+                      {{ typeof row?.yearToDate?.actVsLastYear === 'string' ? row?.yearToDate?.actVsLastYear : formatPercentage(row?.yearToDate?.actVsLastYear) }}
+                    </span>
+                  </TableCell>
+                  <!-- Forecast Data -->
+                  <TableCell class="text-right font-medium py-1">
+                    {{ formatCurrency(row?.forecast?.lastYear || 0) }}
+                  </TableCell>
+                  <TableCell class="text-right font-medium py-1">
+                    {{ formatCurrency(row?.forecast?.budget || 0) }}
+                  </TableCell>
+                  <TableCell class="text-right font-medium py-1">
+                    {{ formatCurrency(row?.forecast?.actual || 0) }}
+                  </TableCell>
+                  <TableCell class="text-right py-1">
+                    <span :class="getPercentageClass(row?.forecast?.actBudThisYear)" class="block text-right">
+                      {{ typeof row?.forecast?.actBudThisYear === 'string' ? row?.forecast?.actBudThisYear : formatPercentage(row?.forecast?.actBudThisYear) }}
+                    </span>
+                  </TableCell>
+                  <TableCell class="text-right py-1">
+                    <span :class="getPercentageClass(row?.forecast?.actVsLastYear)" class="block text-right">
+                      {{ typeof row?.forecast?.actVsLastYear === 'string' ? row?.forecast?.actVsLastYear : formatPercentage(row?.forecast?.actVsLastYear) }}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              </template>
+              
+              <!-- Total Cost of Sales Row -->
+              <TableRow class="border-t-2 border-destructive bg-destructive/10 font-bold">
+                <TableCell class="font-bold border-r border-table-border sticky left-0 bg-destructive/10 z-10 py-3">
+                  TOTAL COST OF SALES
+                </TableCell>
+                <!-- Current Month -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.currentMonth?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.currentMonth?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.currentMonth?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Year to Date -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.yearToDate?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.yearToDate?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.yearToDate?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Forecast -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.forecast?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.forecast?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.forecast?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+
+
+    <!-- Gross Profit Table -->
+    <div class="mt-8"></div>
+    <Card class="bg-gradient-card shadow-dashboard-lg border-table-border">
+      <CardHeader class="flex items-center justify-between px-4 py-2">
+        <div class="flex items-center space-x-3">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            @click="minimizeGrossProfit = !minimizeGrossProfit"
+            class="p-1"
+          >
+            {{ minimizeGrossProfit ? '▶' : '▼' }}
+          </Button>
+          <CardTitle class="text-dashboard-header font-bold text-lg">Gross Profit</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent class="p-0" v-if="!minimizeGrossProfit">
+        <div class="overflow-x-auto">
+          <Table>
+            <TableHeader class="bg-table-header">
+              <TableRow class="border-table-border">
+                <TableHead class="w-auto min-w-[200px] max-w-[800px] border-r border-table-border sticky left-0 bg-table-header z-10 whitespace-nowrap">
+                  <div class="text-dashboard-header font-semibold">Calculation</div>
+                </TableHead>
+                
+                <!-- Current Month Section -->
+                <TableHead colSpan="5" class="text-center border-r border-table-border bg-primary/5">
+                  <div class="text-dashboard-header font-semibold">Current Month</div>
+                </TableHead>
+                
+                <!-- Year to Date Section -->
+                <TableHead colSpan="5" class="text-center border-r border-table-border bg-success/5">
+                  <div class="text-dashboard-header font-semibold">Year to Date</div>
+                </TableHead>
+                
+                <!-- Forecast Section -->
+                <TableHead colSpan="5" class="text-center bg-warning/5">
+                  <div class="text-dashboard-header font-semibold">Forecast</div>
+                </TableHead>
+              </TableRow>
+              
+              <TableRow class="border-table-border">
+                <TableHead class="border-r border-table-border sticky left-0 bg-table-header z-10"></TableHead>
+                
+                <!-- Current Month Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`cm-${idx}`" 
+                  class="text-center border-r border-table-border text-dashboard-subheader py-1"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+                
+                <!-- Year to Date Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`ytd-${idx}`" 
+                  class="text-center border-r border-table-border text-dashboard-subheader py-1"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+                
+                <!-- Forecast Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`fc-${idx}`" 
+                  :class="`text-center text-dashboard-subheader py-1 ${idx < 4 ? 'border-r border-table-border' : ''}`"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            
+            <TableBody>
+              <!-- Total Revenue Row -->
+              <TableRow class="bg-primary/10 font-semibold">
+                <TableCell class="font-semibold border-r border-table-border sticky left-0 bg-primary/10 z-10 py-3">
+                  Total Revenue
+                </TableCell>
+                <!-- Current Month -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.currentMonth?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.currentMonth?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.currentMonth?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Year to Date -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.yearToDate?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.yearToDate?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.yearToDate?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Forecast -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.forecast?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.forecast?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(revenueTotals.forecast?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+              </TableRow>
+              
+              <!-- Total Cost of Sales Row -->
+              <TableRow class="bg-destructive/10 font-semibold">
+                <TableCell class="font-semibold border-r border-table-border sticky left-0 bg-destructive/10 z-10 py-3">
+                  Total Cost of Sales
+                </TableCell>
+                <!-- Current Month -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.currentMonth?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.currentMonth?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.currentMonth?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Year to Date -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.yearToDate?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.yearToDate?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.yearToDate?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Forecast -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.forecast?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.forecast?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(costOfSalesTotals.forecast?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+              </TableRow>
+              
+              <!-- Gross Profit Row -->
+              <TableRow class="border-t-2 border-success bg-success/20 font-bold">
+                <TableCell class="font-bold border-r border-table-border sticky left-0 bg-success/20 z-10 py-3">
+                  GROSS PROFIT
+                </TableCell>
+                <!-- Current Month -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(grossProfitTotals.currentMonth?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(grossProfitTotals.currentMonth?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(grossProfitTotals.currentMonth?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Year to Date -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(grossProfitTotals.yearToDate?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(grossProfitTotals.yearToDate?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(grossProfitTotals.yearToDate?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Forecast -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(grossProfitTotals.forecast?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(grossProfitTotals.forecast?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(grossProfitTotals.forecast?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- Salaries and Wages Table -->
+    <div class="mt-8"></div>
+    <Card class="bg-gradient-card shadow-dashboard-lg border-table-border">
+      <CardHeader class="flex items-center justify-between px-4 py-2">
+        <div class="flex items-center space-x-3">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            @click="minimizeSalariesWages = !minimizeSalariesWages"
+            class="p-1"
+          >
+            {{ minimizeSalariesWages ? '▶' : '▼' }}
+          </Button>
+          <CardTitle class="text-dashboard-header font-bold text-lg">Salaries and Wages</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent class="p-0" v-if="!minimizeSalariesWages">
+        <div class="overflow-x-auto">
+          <Table>
+            <TableHeader class="bg-table-header">
+              <TableRow class="border-table-border">
+                <TableHead class="w-auto min-w-[200px] max-w-[800px] border-r border-table-border sticky left-0 bg-table-header z-10 whitespace-nowrap">
+                  <Button 
+                    variant="ghost" 
+                    @click="handleSort('category')"
+                    class="h-auto p-0 font-semibold text-dashboard-header hover:bg-transparent"
+                  >
+                    <ArrowUpDown class="h-4 w-4" />
+                  </Button>
+                </TableHead>
+                
+                <!-- Current Month Section -->
+                <TableHead colSpan="5" class="text-center border-r border-table-border bg-primary/5">
+                  <div class="text-dashboard-header font-semibold">Current Month</div>
+                </TableHead>
+                
+                <!-- Year to Date Section -->
+                <TableHead colSpan="5" class="text-center border-r border-table-border bg-success/5">
+                  <div class="text-dashboard-header font-semibold">Year to Date</div>
+                </TableHead>
+                
+                <!-- Forecast Section -->
+                <TableHead colSpan="5" class="text-center bg-warning/5">
+                  <div class="text-dashboard-header font-semibold">Forecast</div>
+                </TableHead>
+              </TableRow>
+              
+              <TableRow class="border-table-border">
+                <TableHead class="border-r border-table-border sticky left-0 bg-table-header z-10"></TableHead>
+                
+                <!-- Current Month Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`cm-${idx}`" 
+                  class="text-center border-r border-table-border text-dashboard-subheader py-1"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+                
+                <!-- Year to Date Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`ytd-${idx}`" 
+                  class="text-center border-r border-table-border text-dashboard-subheader py-1"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+                
+                <!-- Forecast Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`fc-${idx}`" 
+                  :class="`text-center text-dashboard-subheader py-1 ${idx < 4 ? 'border-r border-table-border' : ''}`"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            
+            <TableBody>
+              <!-- Salaries and Wages Accounts -->
+              <TableRow
+                v-for="row in (props.hideZeroRows ? salariesWagesData.filter(hasData) : salariesWagesData)"
+                :key="row.account"
+                :class="getRowClass(row)"
+              >
+                <TableCell :class="getCategoryCellClass(row)">
+                  {{ getCategoryDisplay(row) }}
+                </TableCell>
+                <!-- Current Month Data -->
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.currentMonth?.lastYear || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.currentMonth?.budget || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.currentMonth?.actual || 0) }}
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.currentMonth?.actBudThisYear)" class="block text-right">
+                    {{ typeof row?.currentMonth?.actBudThisYear === 'string' ? row?.currentMonth?.actBudThisYear : formatPercentage(row?.currentMonth?.actBudThisYear) }}
+                  </span>
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.currentMonth?.actVsLastYear)" class="block text-right">
+                    {{ typeof row?.currentMonth?.actVsLastYear === 'string' ? row?.currentMonth?.actVsLastYear : formatPercentage(row?.currentMonth?.actVsLastYear) }}
+                  </span>
+                </TableCell>
+                <!-- Year to Date Data -->
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.yearToDate?.lastYear || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.yearToDate?.budget || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.yearToDate?.actual || 0) }}
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.yearToDate?.actBudThisYear)" class="block text-right">
+                    {{ typeof row?.yearToDate?.actBudThisYear === 'string' ? row?.yearToDate?.actBudThisYear : formatPercentage(row?.yearToDate?.actBudThisYear) }}
+                  </span>
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.yearToDate?.actVsLastYear)" class="block text-right">
+                    {{ typeof row?.yearToDate?.actVsLastYear === 'string' ? row?.yearToDate?.actVsLastYear : formatPercentage(row?.yearToDate?.actVsLastYear) }}
+                  </span>
+                </TableCell>
+                <!-- Forecast Data -->
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.forecast?.lastYear || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.forecast?.budget || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.forecast?.actual || 0) }}
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.forecast?.actBudThisYear)" class="block text-right">
+                    {{ typeof row?.forecast?.actBudThisYear === 'string' ? row?.forecast?.actBudThisYear : formatPercentage(row?.forecast?.actBudThisYear) }}
+                  </span>
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.forecast?.actVsLastYear)" class="block text-right">
+                    {{ typeof row?.forecast?.actVsLastYear === 'string' ? row?.forecast?.actVsLastYear : formatPercentage(row?.forecast?.actVsLastYear) }}
+                  </span>
+                </TableCell>
+              </TableRow>
+              
+              <!-- Total Salaries and Wages Row -->
+              <TableRow class="border-t-2 border-warning bg-warning/10 font-bold">
+                <TableCell class="font-bold border-r border-table-border sticky left-0 bg-warning/10 z-10 py-3">
+                  TOTAL SALARIES AND WAGES
+                </TableCell>
+                <!-- Current Month -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.currentMonth?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.currentMonth?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.currentMonth?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Year to Date -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.yearToDate?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.yearToDate?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.yearToDate?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Forecast -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.forecast?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.forecast?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.forecast?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- Payroll Burden Table -->
+    <div class="mt-8"></div>
+    <Card class="bg-gradient-card shadow-dashboard-lg border-table-border">
+      <CardHeader class="flex items-center justify-between px-4 py-2">
+        <div class="flex items-center space-x-3">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            @click="minimizePayrollBurden = !minimizePayrollBurden"
+            class="p-1"
+          >
+            {{ minimizePayrollBurden ? '▶' : '▼' }}
+          </Button>
+          <CardTitle class="text-dashboard-header font-bold text-lg">Payroll Burden</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent class="p-0" v-if="!minimizePayrollBurden">
+        <div class="overflow-x-auto">
+          <Table>
+            <TableHeader class="bg-table-header">
+              <TableRow class="border-table-border">
+                <TableHead class="w-auto min-w-[200px] max-w-[800px] border-r border-table-border sticky left-0 bg-table-header z-10 whitespace-nowrap">
+                  <Button 
+                    variant="ghost" 
+                    @click="handleSort('category')"
+                    class="h-auto p-0 font-semibold text-dashboard-header hover:bg-transparent"
+                  >
+                    <ArrowUpDown class="h-4 w-4" />
+                  </Button>
+                </TableHead>
+                
+                <!-- Current Month Section -->
+                <TableHead colSpan="5" class="text-center border-r border-table-border bg-primary/5">
+                  <div class="text-dashboard-header font-semibold">Current Month</div>
+                </TableHead>
+                
+                <!-- Year to Date Section -->
+                <TableHead colSpan="5" class="text-center border-r border-table-border bg-success/5">
+                  <div class="text-dashboard-header font-semibold">Year to Date</div>
+                </TableHead>
+                
+                <!-- Forecast Section -->
+                <TableHead colSpan="5" class="text-center bg-warning/5">
+                  <div class="text-dashboard-header font-semibold">Forecast</div>
+                </TableHead>
+              </TableRow>
+              
+              <TableRow class="border-table-border">
+                <TableHead class="border-r border-table-border sticky left-0 bg-table-header z-10"></TableHead>
+                
+                <!-- Current Month Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`cm-${idx}`" 
+                  class="text-center border-r border-table-border text-dashboard-subheader py-1"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+                
+                <!-- Year to Date Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`ytd-${idx}`" 
+                  class="text-center border-r border-table-border text-dashboard-subheader py-1"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+                
+                <!-- Forecast Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`fc-${idx}`" 
+                  :class="`text-center text-dashboard-subheader py-1 ${idx < 4 ? 'border-r border-table-border' : ''}`"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            
+            <TableBody>
+              <!-- Payroll Burden Accounts -->
+              <TableRow
+                v-for="row in (props.hideZeroRows ? payrollBurdenData.filter(hasData) : payrollBurdenData)"
+                :key="row.account"
+                :class="getRowClass(row)"
+              >
+                <TableCell :class="getCategoryCellClass(row)">
+                  {{ getCategoryDisplay(row) }}
+                </TableCell>
+                <!-- Current Month Data -->
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.currentMonth?.lastYear || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.currentMonth?.budget || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.currentMonth?.actual || 0) }}
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.currentMonth?.actBudThisYear)" class="block text-right">
+                    {{ typeof row?.currentMonth?.actBudThisYear === 'string' ? row?.currentMonth?.actBudThisYear : formatPercentage(row?.currentMonth?.actBudThisYear) }}
+                  </span>
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.currentMonth?.actVsLastYear)" class="block text-right">
+                    {{ typeof row?.currentMonth?.actVsLastYear === 'string' ? row?.currentMonth?.actVsLastYear : formatPercentage(row?.currentMonth?.actVsLastYear) }}
+                  </span>
+                </TableCell>
+                <!-- Year to Date Data -->
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.yearToDate?.lastYear || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.yearToDate?.budget || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.yearToDate?.actual || 0) }}
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.yearToDate?.actBudThisYear)" class="block text-right">
+                    {{ typeof row?.yearToDate?.actBudThisYear === 'string' ? row?.yearToDate?.actBudThisYear : formatPercentage(row?.yearToDate?.actBudThisYear) }}
+                  </span>
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.yearToDate?.actVsLastYear)" class="block text-right">
+                    {{ typeof row?.yearToDate?.actVsLastYear === 'string' ? row?.yearToDate?.actVsLastYear : formatPercentage(row?.yearToDate?.actVsLastYear) }}
+                  </span>
+                </TableCell>
+                <!-- Forecast Data -->
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.forecast?.lastYear || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.forecast?.budget || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.forecast?.actual || 0) }}
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.forecast?.actBudThisYear)" class="block text-right">
+                    {{ typeof row?.forecast?.actBudThisYear === 'string' ? row?.forecast?.actBudThisYear : formatPercentage(row?.forecast?.actBudThisYear) }}
+                  </span>
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.forecast?.actVsLastYear)" class="block text-right">
+                    {{ typeof row?.forecast?.actVsLastYear === 'string' ? row?.forecast?.actVsLastYear : formatPercentage(row?.forecast?.actVsLastYear) }}
+                  </span>
+                </TableCell>
+              </TableRow>
+              
+              <!-- Total Payroll Burden Row -->
+              <TableRow class="border-t-2 border-warning bg-warning/10 font-bold">
+                <TableCell class="font-bold border-r border-table-border sticky left-0 bg-warning/10 z-10 py-3">
+                  TOTAL PAYROLL BURDEN
+                </TableCell>
+                <!-- Current Month -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.currentMonth?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.currentMonth?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.currentMonth?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Year to Date -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.yearToDate?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.yearToDate?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.yearToDate?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Forecast -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.forecast?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.forecast?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.forecast?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- Combined Payroll Total Table -->
+    <div class="mt-8"></div>
+    <Card class="bg-gradient-card shadow-dashboard-lg border-table-border">
+      <CardHeader class="flex items-center justify-between px-4 py-2">
+        <div class="flex items-center space-x-3">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            @click="minimizeCombinedPayroll = !minimizeCombinedPayroll"
+            class="p-1"
+          >
+            {{ minimizeCombinedPayroll ? '▶' : '▼' }}
+          </Button>
+          <CardTitle class="text-dashboard-header font-bold text-lg">Total Payroll Costs</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent class="p-0" v-if="!minimizeCombinedPayroll">
+        <div class="overflow-x-auto">
+          <Table>
+            <TableHeader class="bg-table-header">
+              <TableRow class="border-table-border">
+                <TableHead class="w-auto min-w-[200px] max-w-[800px] border-r border-table-border sticky left-0 bg-table-header z-10 whitespace-nowrap">
+                  <div class="text-dashboard-header font-semibold">Summary</div>
+                </TableHead>
+                
+                <!-- Current Month Section -->
+                <TableHead colSpan="5" class="text-center border-r border-table-border bg-primary/5">
+                  <div class="text-dashboard-header font-semibold">Current Month</div>
+                </TableHead>
+                
+                <!-- Year to Date Section -->
+                <TableHead colSpan="5" class="text-center border-r border-table-border bg-success/5">
+                  <div class="text-dashboard-header font-semibold">Year to Date</div>
+                </TableHead>
+                
+                <!-- Forecast Section -->
+                <TableHead colSpan="5" class="text-center bg-warning/5">
+                  <div class="text-dashboard-header font-semibold">Forecast</div>
+                </TableHead>
+              </TableRow>
+              
+              <TableRow class="border-table-border">
+                <TableHead class="border-r border-table-border sticky left-0 bg-table-header z-10"></TableHead>
+                
+                <!-- Current Month Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`cm-${idx}`" 
+                  class="text-center border-r border-table-border text-dashboard-subheader py-1"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+                
+                <!-- Year to Date Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`ytd-${idx}`" 
+                  class="text-center border-r border-table-border text-dashboard-subheader py-1"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+                
+                <!-- Forecast Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`fc-${idx}`" 
+                  :class="`text-center text-dashboard-subheader py-1 ${idx < 4 ? 'border-r border-table-border' : ''}`"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            
+            <TableBody>
+              <!-- Total Salaries and Wages Summary Row -->
+              <TableRow class="bg-warning/10 font-semibold">
+                <TableCell class="font-semibold border-r border-table-border sticky left-0 bg-warning/10 z-10 py-3">
+                  Total Salaries and Wages
+                </TableCell>
+                <!-- Current Month -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.currentMonth?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.currentMonth?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.currentMonth?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Year to Date -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.yearToDate?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.yearToDate?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.yearToDate?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Forecast -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.forecast?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.forecast?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(salariesWagesTotals.forecast?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+              </TableRow>
+              
+              <!-- Total Payroll Burden Summary Row -->
+              <TableRow class="bg-warning/10 font-semibold">
+                <TableCell class="font-semibold border-r border-table-border sticky left-0 bg-warning/10 z-10 py-3">
+                  Total Payroll Burden
+                </TableCell>
+                <!-- Current Month -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.currentMonth?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.currentMonth?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.currentMonth?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Year to Date -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.yearToDate?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.yearToDate?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.yearToDate?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Forecast -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.forecast?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.forecast?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(payrollBurdenTotals.forecast?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+              </TableRow>
+              
+              <!-- Combined Total Payroll Row -->
+              <TableRow class="border-t-4 border-primary bg-primary/20 font-bold text-lg">
+                <TableCell class="font-bold border-r border-table-border sticky left-0 bg-primary/20 z-10 py-3">
+                  TOTAL PAYROLL COSTS
+                </TableCell>
+                <!-- Current Month -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedPayrollTotals.currentMonth?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedPayrollTotals.currentMonth?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedPayrollTotals.currentMonth?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Year to Date -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedPayrollTotals.yearToDate?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedPayrollTotals.yearToDate?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedPayrollTotals.yearToDate?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Forecast -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedPayrollTotals.forecast?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedPayrollTotals.forecast?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedPayrollTotals.forecast?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+
+    <!-- Other Expenses Table -->
+    <div class="mt-8"></div>
+    <Card class="bg-gradient-card shadow-dashboard-lg border-table-border">
+      <CardHeader class="flex items-center justify-between px-4 py-2">
+        <div class="flex items-center space-x-3">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            @click="minimizeOtherExpenses = !minimizeOtherExpenses"
+            class="p-1"
+          >
+            {{ minimizeOtherExpenses ? '▶' : '▼' }}
+          </Button>
+          <CardTitle class="text-dashboard-header font-bold text-lg">Other Expenses</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent class="p-0" v-if="!minimizeOtherExpenses">
+        <div class="overflow-x-auto">
+          <Table>
+            <TableHeader class="bg-table-header">
+              <TableRow class="border-table-border">
+                <TableHead class="w-auto min-w-[200px] max-w-[800px] border-r border-table-border sticky left-0 bg-table-header z-10 whitespace-nowrap">
+                  <Button 
+                    variant="ghost" 
+                    @click="handleSort('category')"
+                    class="h-auto p-0 font-semibold text-dashboard-header hover:bg-transparent"
+                  >
+                    <ArrowUpDown class="h-4 w-4" />
+                  </Button>
+                </TableHead>
+                
+                <!-- Current Month Section -->
+                <TableHead colSpan="5" class="text-center border-r border-table-border bg-primary/5">
+                  <div class="text-dashboard-header font-semibold">Current Month</div>
+                </TableHead>
+                
+                <!-- Year to Date Section -->
+                <TableHead colSpan="5" class="text-center border-r border-table-border bg-success/5">
+                  <div class="text-dashboard-header font-semibold">Year to Date</div>
+                </TableHead>
+                
+                <!-- Forecast Section -->
+                <TableHead colSpan="5" class="text-center bg-warning/5">
+                  <div class="text-dashboard-header font-semibold">Forecast</div>
+                </TableHead>
+              </TableRow>
+              
+              <TableRow class="border-table-border">
+                <TableHead class="border-r border-table-border sticky left-0 bg-table-header z-10"></TableHead>
+                
+                <!-- Current Month Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`cm-${idx}`" 
+                  class="text-center border-r border-table-border text-dashboard-subheader py-1"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+                
+                <!-- Year to Date Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`ytd-${idx}`" 
+                  class="text-center border-r border-table-border text-dashboard-subheader py-1"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+                
+                <!-- Forecast Subheaders -->
+                <TableHead 
+                  v-for="(header, idx) in ['Last Year', 'Budget', 'Actual', 'Act/Bud This Year', 'Act/Last Year']" 
+                  :key="`fc-${idx}`" 
+                  :class="`text-center text-dashboard-subheader py-1 ${idx < 4 ? 'border-r border-table-border' : ''}`"
+                >
+                  <div class="text-xs">{{ header }}</div>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            
+            <TableBody>
+              <!-- Other Expenses Accounts -->
+              <TableRow
+                v-for="row in (props.hideZeroRows ? combinedOtherExpensesData.filter(hasData) : combinedOtherExpensesData)"
+                :key="row.account"
+                :class="getRowClass(row)"
+              >
+                <TableCell :class="getCategoryCellClass(row)">
+                  {{ getCategoryDisplay(row) }}
+                </TableCell>
+                <!-- Current Month Data -->
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.currentMonth?.lastYear || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.currentMonth?.budget || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.currentMonth?.actual || 0) }}
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.currentMonth?.actBudThisYear)" class="block text-right">
+                    {{ typeof row?.currentMonth?.actBudThisYear === 'string' ? row?.currentMonth?.actBudThisYear : formatPercentage(row?.currentMonth?.actBudThisYear) }}
+                  </span>
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.currentMonth?.actVsLastYear)" class="block text-right">
+                    {{ typeof row?.currentMonth?.actVsLastYear === 'string' ? row?.currentMonth?.actVsLastYear : formatPercentage(row?.currentMonth?.actVsLastYear) }}
+                  </span>
+                </TableCell>
+                <!-- Year to Date Data -->
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.yearToDate?.lastYear || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.yearToDate?.budget || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.yearToDate?.actual || 0) }}
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.yearToDate?.actBudThisYear)" class="block text-right">
+                    {{ typeof row?.yearToDate?.actBudThisYear === 'string' ? row?.yearToDate?.actBudThisYear : formatPercentage(row?.yearToDate?.actBudThisYear) }}
+                  </span>
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.yearToDate?.actVsLastYear)" class="block text-right">
+                    {{ typeof row?.yearToDate?.actVsLastYear === 'string' ? row?.yearToDate?.actVsLastYear : formatPercentage(row?.yearToDate?.actVsLastYear) }}
+                  </span>
+                </TableCell>
+                <!-- Forecast Data -->
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.forecast?.lastYear || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.forecast?.budget || 0) }}
+                </TableCell>
+                <TableCell class="text-right font-medium py-1">
+                  {{ formatCurrency(row?.forecast?.actual || 0) }}
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.forecast?.actBudThisYear)" class="block text-right">
+                    {{ typeof row?.forecast?.actBudThisYear === 'string' ? row?.forecast?.actBudThisYear : formatPercentage(row?.forecast?.actBudThisYear) }}
+                  </span>
+                </TableCell>
+                <TableCell class="text-right py-1">
+                  <span :class="getPercentageClass(row?.forecast?.actVsLastYear)" class="block text-right">
+                    {{ typeof row?.forecast?.actVsLastYear === 'string' ? row?.forecast?.actVsLastYear : formatPercentage(row?.forecast?.actVsLastYear) }}
+                  </span>
+                </TableCell>
+              </TableRow>
+              
+              <!-- Total Other Expenses Row -->
+              <TableRow class="border-t-2 border-slate-500 bg-slate-500/10 font-bold">
+                <TableCell class="font-bold border-r border-table-border sticky left-0 bg-slate-500/10 z-10 py-3">
+                  TOTAL OTHER EXPENSES
+                </TableCell>
+                <!-- Current Month -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedOtherExpensesTotals.currentMonth?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedOtherExpensesTotals.currentMonth?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedOtherExpensesTotals.currentMonth?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Year to Date -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedOtherExpensesTotals.yearToDate?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedOtherExpensesTotals.yearToDate?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedOtherExpensesTotals.yearToDate?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <!-- Forecast -->
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedOtherExpensesTotals.forecast?.lastYear || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedOtherExpensesTotals.forecast?.budget || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3">{{ formatCurrency(combinedOtherExpensesTotals.forecast?.actual || 0) }}</TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+                <TableCell class="text-right border-r border-table-border py-3"></TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
+import { Button } from '@/components/ui'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
+import { ArrowUpDown, TrendingUp, TrendingDown, Minus, BarChart3, PieChart, DollarSign } from 'lucide-vue-next'
+
+const props = defineProps({
+  filters: {
+    type: Object,
+    required: true
+  },
+  data: {
+    type: Array,
+    default: () => []
+  },
+  summaryData: {
+    type: Object,
+    default: () => ({})
+  },
+  hideZeroRows: {
+    type: Boolean,
+    default: false
+  }
+})
+
+// Toggle to minimize tables
+const minimizeIncome = ref(false)
+const minimizeIncomeSeparate = ref(false)
+const minimizeExpense = ref(false)
+const minimizeGrossProfit = ref(false)
+const minimizeSalariesWages = ref(false)
+const minimizePayrollBurden = ref(false)
+const minimizeCombinedPayroll = ref(false)
+const minimizeOtherExpenses = ref(false)
+
+// Utility function for number formatting
+const formatCurrency = (value) => {
+  if (value === null || value === undefined || isNaN(value)) return '0'
+  return Math.abs(Number(value)).toLocaleString()
+}
+
+// Utility function for percentage formatting
+const formatPercentage = (value) => {
+  if (value === null || value === undefined || isNaN(value)) return '0.0%'
+  return `${(Number(value) * 100).toFixed(1)}%`
+}
+
+// Returns true if any period has non-zero values
+const hasData = (row) => {
+  if (row.type !== 'account') return true // Headers and totals always show
+  
+  const periods = ['currentMonth', 'yearToDate', 'forecast']
+  const fields = ['lastYear', 'budget', 'actual']
+  
+  for (const period of periods) {
+    for (const field of fields) {
+      const val = row[period]?.[field]
+      if (val !== undefined && val !== null && Math.abs(Number(val)) > 0) {
+        return true
+      }
+    }
+  }
+  return false
+}
+
+// Calculate totals for a specific Cost of Sales section
+const getSectionTotals = (section, period, metric) => {
+  if (!section || !section.expenseAccounts || !Array.isArray(section.expenseAccounts)) {
+    return 0
+  }
+  
+  let total = 0
+  section.expenseAccounts.forEach(account => {
+    const value = account[period]?.[metric] || 0
+    total += Math.abs(Number(value))
+  })
+  
+  return total
+}
+
+// Calculate totals for a specific Revenue section
+const getRevenueSectionTotals = (section, period, metric) => {
+  if (!section || !section.incomeAccounts || !Array.isArray(section.incomeAccounts)) {
+    return 0
+  }
+  
+  let total = 0
+  section.incomeAccounts.forEach(account => {
+    const value = account[period]?.[metric] || 0
+    total += Math.abs(Number(value))
+  })
+  
+  return total
+}
+
+// Simplified data access - backend now handles grouping by report_class
+const groupedDashboardData = computed(() => {
+  // The backend now provides data grouped by report_class
+  // Just return the data as-is since grouping is handled server-side
+  return props.data || []
+})
+
+// Get all income data
+const incomeData = computed(() => {
+  return (props.data || []).filter(row => row.root_type === 'Income')
+})
+
+// Get all expense data
+// NOTE: Unified `expenseData` computed is declared above. Remove duplicate declaration.
+
+// Get section headers (Revenue, Direct Expenses, Other Expenses, etc.)
+const sectionHeaders = computed(() => {
+  return (props.data || []).filter(row => row.type === 'header')
+})
+
+// Get sub-headers (report_class values like Food, Beverage, Marketing, etc.)
+const subHeaders = computed(() => {
+  return (props.data || []).filter(row => row.type === 'sub_header')
+})
+
+// Get sub-sub-headers (account groups within report_classes)
+const subSubHeaders = computed(() => {
+  return (props.data || []).filter(row => row.type === 'sub_sub_header')
+})
+
+// Get account rows
+const accountRows = computed(() => {
+  return (props.data || []).filter(row => row.type === 'account')
+})
+
+// Get total rows
+const totalRows = computed(() => {
+  return (props.data || []).filter(row => row.type === 'total')
+})
+
+// Use the hierarchical data directly from the API - simplified
+const allIncomeData = computed(() => {
+  return (props.data || []).filter(row => row.root_type === 'Income')
+})
+
+const expenseData = computed(() => {
+  return (props.data || []).filter(row => row.root_type === 'Expense')
+})
+
+// Cost of Sales data - get accounts that are specifically cost of sales related
+// Simplified computed properties - use backend structure directly
+const costOfSalesData = computed(() => {
+  return (props.data || []).filter(row => row.root_type === 'Expense' && row.type === 'account')
+})
+
+const salariesWagesData = computed(() => {
+  return (props.data || []).filter(row => row.root_type === 'Expense' && row.type === 'account')
+})
+
+const payrollBurdenData = computed(() => {
+  return (props.data || []).filter(row => row.root_type === 'Expense' && row.type === 'account')
+})
+
+const combinedOtherExpensesData = computed(() => {
+  return (props.data || []).filter(row => row.root_type === 'Expense' && row.type === 'account')
+})
+
+// Simplified totals calculation - use backend data directly
+const revenueTotals = computed(() => {
+  let totals = {
+    currentMonth: { lastYear: 0, budget: 0, actual: 0 },
+    yearToDate: { lastYear: 0, budget: 0, actual: 0 },
+    forecast: { lastYear: 0, budget: 0, actual: 0 }
+  }
+  
+  // Sum all income accounts from backend data
+  ;(props.data || []).forEach(row => {
+    if (row.type === 'account' && row.root_type === 'Income') {
+      totals.currentMonth.lastYear += Math.abs(row.currentMonth?.lastYear || 0)
+      totals.currentMonth.budget += Math.abs(row.currentMonth?.budget || 0)
+      totals.currentMonth.actual += Math.abs(row.currentMonth?.actual || 0)
+      totals.yearToDate.lastYear += Math.abs(row.yearToDate?.lastYear || 0)
+      totals.yearToDate.budget += Math.abs(row.yearToDate?.budget || 0)
+      totals.yearToDate.actual += Math.abs(row.yearToDate?.actual || 0)
+      totals.forecast.lastYear += Math.abs(row.forecast?.lastYear || 0)
+      totals.forecast.budget += Math.abs(row.forecast?.budget || 0)
+      totals.forecast.actual += Math.abs(row.forecast?.actual || 0)
+    }
+  })
+  
+  return totals
+})
+
+// Simplified expense totals - use backend data directly
+const costOfSalesTotals = computed(() => {
+  let totals = {
+    currentMonth: { lastYear: 0, budget: 0, actual: 0 },
+    yearToDate: { lastYear: 0, budget: 0, actual: 0 },
+    forecast: { lastYear: 0, budget: 0, actual: 0 }
+  }
+  
+  // Sum all expense accounts from backend data
+  ;(props.data || []).forEach(row => {
+    if (row.type === 'account' && row.root_type === 'Expense') {
+      totals.currentMonth.lastYear += Math.abs(row.currentMonth?.lastYear || 0)
+      totals.currentMonth.budget += Math.abs(row.currentMonth?.budget || 0)
+      totals.currentMonth.actual += Math.abs(row.currentMonth?.actual || 0)
+      totals.yearToDate.lastYear += Math.abs(row.yearToDate?.lastYear || 0)
+      totals.yearToDate.budget += Math.abs(row.yearToDate?.budget || 0)
+      totals.yearToDate.actual += Math.abs(row.yearToDate?.actual || 0)
+      totals.forecast.lastYear += Math.abs(row.forecast?.lastYear || 0)
+      totals.forecast.budget += Math.abs(row.forecast?.budget || 0)
+      totals.forecast.actual += Math.abs(row.forecast?.actual || 0)
+    }
+  })
+  
+  return totals
+})
+
+// Simplified direct expenses totals
+const directExpensesTotals = computed(() => {
+  return costOfSalesTotals.value
+})
+
+// Simplified gross profit totals
+const grossProfitTotals = computed(() => {
+  const revenue = revenueTotals.value
+  const costOfSales = costOfSalesTotals.value
+  return {
+    currentMonth: {
+      lastYear: (revenue.currentMonth?.lastYear || 0) - (costOfSales.currentMonth?.lastYear || 0),
+      budget: (revenue.currentMonth?.budget || 0) - (costOfSales.currentMonth?.budget || 0),
+      actual: (revenue.currentMonth?.actual || 0) - (costOfSales.currentMonth?.actual || 0)
+    },
+    yearToDate: {
+      lastYear: (revenue.yearToDate?.lastYear || 0) - (costOfSales.yearToDate?.lastYear || 0),
+      budget: (revenue.yearToDate?.budget || 0) - (costOfSales.yearToDate?.budget || 0),
+      actual: (revenue.yearToDate?.actual || 0) - (costOfSales.yearToDate?.actual || 0)
+    },
+    forecast: {
+      lastYear: (revenue.forecast?.lastYear || 0) - (costOfSales.forecast?.lastYear || 0),
+      budget: (revenue.forecast?.budget || 0) - (costOfSales.forecast?.budget || 0),
+      actual: (revenue.forecast?.actual || 0) - (costOfSales.forecast?.actual || 0)
+    }
+  }
+})
+
+// Simplified totals - use backend data directly
+const salariesWagesTotals = computed(() => {
+  return costOfSalesTotals.value
+})
+
+const payrollBurdenTotals = computed(() => {
+  return costOfSalesTotals.value
+})
+
+const combinedPayrollTotals = computed(() => {
+  return costOfSalesTotals.value
+})
+
+const combinedOtherExpensesTotals = computed(() => {
+  return costOfSalesTotals.value
+})
+
+// Row styling functions
+const getRowClass = (row) => {
+  if (row?.type === 'header') return 'bg-table-header font-semibold'
+  if (row?.type === 'total') return 'border-t-2 border-primary bg-primary/10 font-bold'
+  return 'hover:bg-muted/50'
+}
+
+const getCategoryCellClass = (row) => {
+  const baseClass = 'border-r border-table-border sticky left-0 z-10 py-1'
+  if (row?.type === 'header') return `${baseClass} bg-table-header font-semibold`
+  if (row?.type === 'total') return `${baseClass} bg-primary/10 font-bold`
+  return `${baseClass} bg-background`
+}
+
+const getCategoryDisplay = (row) => {
+  return row?.category || row?.account || 'Unknown'
+}
+
+const getPercentageClass = (value) => {
+  if (typeof value === 'string' || value === null || value === undefined) return ''
+  if (value > 0) return 'text-success'
+  if (value < 0) return 'text-destructive'
+  return ''
+}
+
+const handleSort = (field) => {
+  console.log('Sorting by:', field)
+  // Sorting logic would go here
+}
+
+// Get expense header totals - only for Direct Expenses
+const getExpenseHeaderTotals = (headerCategory) => {
+  const accounts = []
+  
+  // Find the header row first
+  const headerIndex = (props.data || []).findIndex(row => 
+    row.type === 'header' && row.category === headerCategory && row.root_type === 'Expense'
+  )
+  
+  if (headerIndex === -1) {
+    console.warn(`Expense header '${headerCategory}' not found`)
+    return []
+  }
+  
+  // Look for accounts that belong to this specific header category
+  for (let i = headerIndex + 1; i < (props.data || []).length; i++) {
+    const row = props.data[i]
+    
+    // Stop if we hit another header or a different root type
+    if (row.type === 'header' || row.root_type !== 'Expense') {
+      break
+    }
+    
+    // Only include accounts that actually belong to this header category AND are Direct Expenses
+    if (row.type === 'account') {
+      const accountCode = row.account || ''
+      const accountName = row.category || ''
+      
+      // Extract account code from the account field
+      let extractedCode = ''
+      if (accountCode && typeof accountCode === 'string') {
+        if (accountCode.includes(' - ')) {
+          extractedCode = accountCode.split(' - ')[0]
+        } else {
+          extractedCode = accountCode
+        }
+      }
+      
+      // ONLY include Direct Expenses (500xx accounts)
+      if (!extractedCode.startsWith('500')) {
+        continue // Skip Indirect Expenses
+      }
+      
+      // For Direct Expenses - check if account code starts with 500 or contains 'direct' in name
+      if (headerCategory === 'Direct Expenses') {
+        if (extractedCode.startsWith('500') || accountName.toLowerCase().includes('direct')) {
+          accounts.push(row)
+        }
+      }
+      // For Cost of Sales - check if account code starts with 500 or contains 'cost' in name
+      else if (headerCategory === 'Cost of Sales') {
+        if (extractedCode.startsWith('500') || accountName.toLowerCase().includes('cost')) {
+          accounts.push(row)
+        }
+      }
+      // For other categories, use the account name to determine if it belongs
+      else {
+        // Check if the account name contains keywords related to the header category
+        const headerKeywords = headerCategory.toLowerCase().split(' ')
+        const accountKeywords = accountName.toLowerCase().split(' ')
+        
+        // If there's any overlap in keywords, include the account
+        const hasOverlap = headerKeywords.some(hk => 
+          accountKeywords.some(ak => ak.includes(hk) || hk.includes(ak))
+        )
+        
+        if (hasOverlap) {
+          accounts.push(row)
+        }
+      }
+    }
+  }
+  
+  console.log(`Found ${accounts.length} Direct Expense accounts for header '${headerCategory}':`, 
+    accounts.map(acc => `${acc.account} (${acc.category})`))
+  
+  const totals = {
+    currentMonth: { lastYear: 0, budget: 0, actual: 0 },
+    yearToDate: { lastYear: 0, budget: 0, actual: 0 },
+    forecast: { lastYear: 0, budget: 0, actual: 0 }
+  }
+  
+  accounts.forEach(account => {
+    totals.currentMonth.lastYear += Math.abs(account.currentMonth?.lastYear || 0)
+    totals.currentMonth.budget += Math.abs(account.currentMonth?.budget || 0)
+    totals.currentMonth.actual += Math.abs(account.currentMonth?.actual || 0)
+    totals.yearToDate.lastYear += Math.abs(account.yearToDate?.lastYear || 0)
+    totals.yearToDate.budget += Math.abs(account.yearToDate?.budget || 0)
+    totals.yearToDate.actual += Math.abs(account.yearToDate?.actual || 0)
+    totals.forecast.lastYear += Math.abs(account.forecast?.lastYear || 0)
+    totals.forecast.budget += Math.abs(account.forecast?.budget || 0)
+    totals.forecast.actual += Math.abs(account.forecast?.actual || 0)
+  })
+  
+  return totals
+}
+
+// Expense rows - use backend structure directly
+const expenseRows = computed(() => {
+  let allExpenseRows = (props.data || []).filter(row => row.root_type === 'Expense')
+  
+  // Apply hideZeroRows filter if enabled
+  if (props.hideZeroRows) {
+    allExpenseRows = allExpenseRows.filter(hasData)
+  }
+  
+  return allExpenseRows
+})
+</script>
+

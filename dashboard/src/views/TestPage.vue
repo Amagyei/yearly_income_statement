@@ -307,7 +307,7 @@ import {
   AlertCircle, 
   ArrowLeft 
 } from 'lucide-vue-next'
-import testApiService from '../services/testApi'
+// import testApiService from '../services/testApi'
 
 // State
 const loading = ref(false)
@@ -343,8 +343,8 @@ const runAllTests = async () => {
   
   try {
     console.log('Running all tests with filters:', testFilters)
-    const results = await testApiService.runAllTests(testFilters)
-    testResults.value = results
+    // const results = await testApiService.runAllTests(testFilters)
+    testResults.value = { success: false, error: 'testApi service not available' }
     console.log('All tests completed:', results)
   } catch (err) {
     console.error('Failed to run tests:', err)
@@ -359,8 +359,8 @@ const testConnection = async () => {
   error.value = null
   
   try {
-    const result = await testApiService.testConnection()
-    testResults.value = { connection: result }
+    // const result = await testApiService.testConnection()
+    testResults.value = { connection: { success: false, error: 'testApi service not available' } }
   } catch (err) {
     error.value = err.message || 'Connection test failed'
   } finally {
@@ -373,8 +373,8 @@ const testPeriodList = async () => {
   error.value = null
   
   try {
-    const result = await testApiService.testPeriodListGeneration(testFilters)
-    testResults.value = { periodList: result }
+    // const result = await testApiService.testPeriodListGeneration(testFilters)
+    testResults.value = { periodList: { success: false, error: 'testApi service not available' } }
   } catch (err) {
     error.value = err.message || 'Period list test failed'
   } finally {
@@ -387,8 +387,8 @@ const testIncomeData = async () => {
   error.value = null
   
   try {
-    const result = await testApiService.testIncomeDataGeneration(testFilters)
-    testResults.value = { income: result }
+    // const result = await testApiService.testIncomeDataGeneration(testFilters)
+    testResults.value = { income: { success: false, error: 'testApi service not available' } }
   } catch (err) {
     error.value = err.message || 'Income data test failed'
   } finally {
@@ -401,8 +401,8 @@ const testExpenseData = async () => {
   error.value = null
   
   try {
-    const result = await testApiService.testExpenseDataGeneration(testFilters)
-    testResults.value = { expense: result }
+    // const result = await testApiService.testExpenseDataGeneration(testFilters)
+    testResults.value = { expense: { success: false, error: 'testApi service not available' } }
   } catch (err) {
     error.value = err.message || 'Expense data test failed'
   } finally {
@@ -415,8 +415,8 @@ const testColumns = async () => {
   error.value = null
   
   try {
-    const result = await testApiService.testColumnsGeneration(testFilters)
-    testResults.value = { columns: result }
+    // const result = await testApiService.testColumnsGeneration(testFilters)
+    testResults.value = { columns: { success: false, error: 'testApi service not available' } }
   } catch (err) {
     error.value = err.message || 'Columns test failed'
   } finally {
@@ -429,8 +429,8 @@ const testCompletePnl = async () => {
   error.value = null
   
   try {
-    const result = await testApiService.testCompletePnlExecution(testFilters)
-    testResults.value = { completePnl: result }
+    // const result = await testApiService.testCompletePnlExecution(testFilters)
+    testResults.value = { completePnl: { success: false, error: 'testApi service not available' } }
   } catch (err) {
     error.value = err.message || 'Complete P&L test failed'
   } finally {
@@ -443,8 +443,8 @@ const testGrowthView = async () => {
   error.value = null
   
   try {
-    const result = await testApiService.testGrowthViewComputation(testFilters)
-    testResults.value = { growth: result }
+    // const result = await testApiService.testGrowthViewComputation(testFilters)
+    testResults.value = { growth: { success: false, error: 'testApi service not available' } }
   } catch (err) {
     error.value = err.message || 'Growth view test failed'
   } finally {
@@ -457,8 +457,8 @@ const testMarginView = async () => {
   error.value = null
   
   try {
-    const result = await testApiService.testMarginViewComputation(testFilters)
-    testResults.value = { margin: result }
+    // const result = await testApiService.testMarginViewComputation(testFilters)
+    testResults.value = { margin: { success: false, error: 'testApi service not available' } }
   } catch (err) {
     error.value = err.message || 'Margin view test failed'
   } finally {
@@ -471,8 +471,8 @@ const testGLEntries = async () => {
   error.value = null
   
   try {
-    const result = await testApiService.testGLEntries(testFilters)
-    testResults.value = { glEntries: result }
+    // const result = await testApiService.testGLEntries(testFilters)
+    testResults.value = { glEntries: { success: false, error: 'testApi service not available' } }
   } catch (err) {
     error.value = err.message || 'GL entries test failed'
   } finally {
@@ -485,8 +485,8 @@ const testDashboardDataStructure = async () => {
   error.value = null
   
   try {
-    const result = await testApiService.testDashboardDataStructure(testFilters)
-    testResults.value = { dashboardDataStructure: result }
+    // const result = await testApiService.testDashboardDataStructure(testFilters)
+    testResults.value = { dashboardDataStructure: { success: false, error: 'testApi service not available' } }
   } catch (err) {
     error.value = err.message || 'Dashboard data structure test failed'
   } finally {
@@ -499,8 +499,8 @@ const testPerformance = async () => {
   error.value = null
   
   try {
-    const result = await testApiService.testPerformance(testFilters, 5)
-    testResults.value = { performance: result }
+    // const result = await testApiService.testPerformance(testFilters, 5)
+    testResults.value = { performance: { success: false, error: 'testApi service not available' } }
   } catch (err) {
     error.value = err.message || 'Performance test failed'
   } finally {
@@ -513,8 +513,8 @@ const compareWithErpnext = async () => {
   error.value = null
   
   try {
-    const result = await testApiService.compareWithErpnext(testFilters)
-    testResults.value = { comparison: result }
+    // const result = await testApiService.compareWithErpnext(testFilters)
+    testResults.value = { comparison: { success: false, error: 'testApi service not available' } }
   } catch (err) {
     error.value = err.message || 'Comparison test failed'
   } finally {
@@ -527,7 +527,7 @@ const getTestSummary = async () => {
   error.value = null
   
   try {
-    const result = await testApiService.getTestSummary()
+    // const result = await testApiService.getTestSummary()
     testResults.value = { summary: result }
   } catch (err) {
     error.value = err.message || 'Summary test failed'

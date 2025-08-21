@@ -166,7 +166,7 @@
                   <p class="text-sm text-muted-foreground">Total Income</p>
                   <p class="text-2xl font-bold text-dashboard-header">{{ formatCurrency(summaryData.total_income || 0) }}</p>
                 </div>
-                <DollarSign class="h-8 w-8 text-primary" />
+                <BarChart3 class="h-8 w-8 text-primary" />
               </div>
             </CardContent>
           </Card>
@@ -220,7 +220,7 @@
               >
                 {{ minimizeIncome ? '▶' : '▼' }}
               </Button>
-              <CardTitle class="text-dashboard-header font-bold text-lg">Income</CardTitle>
+              <CardTitle class="text-dashboard-header font-bold text-lg">Direct Income/Revenue</CardTitle>
             </div>
           </CardHeader>
           <CardContent class="p-0" v-if="!minimizeIncome">
@@ -294,6 +294,219 @@
           </CardContent>
         </Card>
 
+        <!-- Debug: Direct Revenue Data Check -->
+        <div class="mt-4 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+          <strong>Debug:</strong> 
+          Direct Revenue accounts found: {{ incomeData.length }} | 
+          Cost of Sales accounts found: {{ costOfSalesData.length }} |
+          Total dashboard data: {{ dashboardData.length }}
+          <br>
+          <Button @click="refreshData" size="sm" class="mt-2">Refresh Data</Button>
+          <span class="ml-2">Loading: {{ loading }}</span>
+          <span class="ml-2">Error: {{ error || 'None' }}</span>
+        </div>
+
+        <!-- Direct Revenue Table -->
+        <Card class="bg-gradient-card shadow-dashboard-lg border-table-border mt-8">
+          <CardHeader class="flex items-center justify-between px-4 py-2">
+            <div class="flex items-center space-x-3">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                @click="minimizeDirectRevenue = !minimizeDirectRevenue"
+                class="p-1"
+              >
+                {{ minimizeDirectRevenue ? '▶' : '▼' }}
+              </Button>
+              <CardTitle class="text-dashboard-header font-bold text-lg">Direct Revenue (Core Business Income)</CardTitle>
+              <div class="text-sm text-muted-foreground ml-2">
+                Room, Food, Beverage, Spa & other operational income
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent class="p-0" v-if="!minimizeDirectRevenue">
+            <div class="overflow-x-auto">
+              <Table>
+                <TableHeader class="bg-table-header">
+                  <TableRow class="border-table-border">
+                    <TableHead class="w-auto min-w-[200px] max-w-[800px] border-r border-table-border sticky left-0 bg-table-header z-10 whitespace-nowrap">
+                      Account
+                    </TableHead>
+                    
+                    <!-- Period Columns -->
+                    <TableHead 
+                      v-for="period in periodList" 
+                      :key="period.key" 
+                      class="text-center border-r border-table-border bg-green-500/5"
+                    >
+                      <div class="text-dashboard-header font-semibold">{{ period.label }}</div>
+                    </TableHead>
+                    
+                    <!-- Total Column -->
+                    <TableHead class="text-center bg-success/5">
+                      <div class="text-dashboard-header font-semibold">Total</div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <template v-for="row in incomeData" :key="row.account || row.account_name">
+                    <TableRow 
+                      v-if="!hideZeroValues || hasData(row)"
+                      :class="getRowClass(row)"
+                    >
+                      <TableCell class="font-medium py-2 border-r border-table-border">
+                        {{ row.account_name || row.account }}
+                      </TableCell>
+                      <TableCell 
+                        v-for="period in periodList" 
+                        :key="period.key"
+                        class="text-right py-2 border-r border-table-border"
+                      >
+                        {{ formatCurrency(row[period.key] || 0) }}
+                      </TableCell>
+                      <TableCell class="text-right font-medium py-2">
+                        {{ formatCurrency(row.total || 0) }}
+                      </TableCell>
+                    </TableRow>
+                  </template>
+                  <!-- Direct Revenue Total -->
+                  <TableRow class="border-t-2 border-green-500 bg-green-500/5 font-bold">
+                    <TableCell class="font-bold py-3 border-r border-table-border">TOTAL DIRECT REVENUE</TableCell>
+                    <TableCell 
+                      v-for="period in periodList" 
+                      :key="period.key"
+                      class="text-right font-bold py-3 border-r border-table-border"
+                    >
+                      {{ formatCurrency(incomeTotal[period.key] || 0) }}
+                    </TableCell>
+                    <TableCell class="text-right font-bold py-3">
+                      {{ formatCurrency(incomeTotal.total || 0) }}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- Cost of Sales Table (Dedicated) -->
+        <Card class="bg-gradient-card shadow-dashboard-lg border-table-border mt-8">
+          <CardHeader class="flex items-center justify-between px-4 py-2">
+            <div class="flex items-center space-x-3">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                @click="minimizeCostOfSalesDedicated = !minimizeCostOfSalesDedicated"
+                class="p-1"
+              >
+                {{ minimizeCostOfSalesDedicated ? '▶' : '▼' }}
+              </Button>
+              <CardTitle class="text-dashboard-header font-bold text-lg">Cost of Sales (Direct Costs)</CardTitle>
+              <div class="text-sm text-muted-foreground ml-2">
+                Food, Beverage, Room supplies & operational costs
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent class="p-0" v-if="!minimizeCostOfSalesDedicated">
+            <div class="overflow-x-auto">
+              <Table>
+                <TableHeader class="bg-table-header">
+                  <TableRow class="border-table-border">
+                    <TableHead class="w-auto min-w-[200px] max-w-[800px] border-r border-table-border sticky left-0 bg-table-header z-10 whitespace-nowrap">
+                      Account
+                    </TableHead>
+                    
+                    <!-- Period Columns -->
+                    <TableHead 
+                      v-for="period in periodList" 
+                      :key="period.key" 
+                      class="text-center border-r border-table-border bg-orange-500/5"
+                    >
+                      <div class="text-dashboard-header font-semibold">{{ period.label }}</div>
+                    </TableHead>
+                    
+                    <!-- Total Column -->
+                    <TableHead class="text-center bg-success/5">
+                      <div class="text-dashboard-header font-semibold">Total</div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <template v-for="row in costOfSalesData" :key="row.account || row.account_name">
+                    <TableRow 
+                      v-if="!hideZeroValues || hasData(row)"
+                      :class="getRowClass(row)"
+                    >
+                      <TableCell class="font-medium py-2 border-r border-table-border">
+                        {{ row.account_name || row.account }}
+                      </TableCell>
+                      <TableCell 
+                        v-for="period in periodList" 
+                        :key="period.key"
+                        class="text-right py-2 border-r border-table-border"
+                      >
+                        {{ formatCurrency(row[period.key] || 0) }}
+                      </TableCell>
+                      <TableCell class="text-right font-medium py-2">
+                        {{ formatCurrency(row.total || 0) }}
+                      </TableCell>
+                    </TableRow>
+                  </template>
+                  <!-- Cost of Sales Total -->
+                  <TableRow class="border-t-2 border-orange-500 bg-orange-500/5 font-bold">
+                    <TableCell class="font-bold py-3 border-r border-table-border">TOTAL COST OF SALES</TableCell>
+                    <TableCell 
+                      v-for="period in periodList" 
+                      :key="period.key"
+                      class="text-right font-bold py-3 border-r border-table-border"
+                    >
+                      {{ formatCurrency(costOfSalesTotal[period.key] || 0) }}
+                    </TableCell>
+                    <TableCell class="text-right font-bold py-3">
+                      {{ formatCurrency(costOfSalesTotal.total || 0) }}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- Debug: Income Accounts Analysis -->
+        <div v-if="showDebug" class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <h5 class="font-semibold mb-2 text-yellow-800">🔍 Income Accounts Debug Info</h5>
+          <div class="text-sm text-yellow-700">
+            <div class="mb-2">
+              <strong>All Income Accounts Found:</strong> {{ debugIncomeAccounts.length }}
+            </div>
+            <div class="mb-2">
+              <strong>Direct Revenue Accounts (section === Direct Revenue):</strong> {{ incomeData.length }}
+            </div>
+            <div class="mb-2">
+              <strong>Indirect Revenue Accounts (section === Indirect Revenue):</strong> {{ indirectIncomeData.length }}
+            </div>
+            <div class="mb-2">
+              <strong>Income Accounts with section === null/undefined:</strong> 
+              {{ debugIncomeAccounts.filter(acc => !acc.section).length }}
+            </div>
+          </div>
+          <details class="mt-2">
+            <summary class="cursor-pointer text-yellow-800 font-medium">Show Account Details</summary>
+            <div class="mt-2 text-xs">
+              <div v-for="acc in debugIncomeAccounts" :key="acc.account" class="mb-1 p-2 bg-white rounded border">
+                <strong>{{ acc.account }}</strong> - {{ acc.account_name }} | 
+                <span :class="{
+                  'text-green-600': acc.section === 'Direct Revenue',
+                  'text-red-600': acc.section === 'Indirect Revenue',
+                  'text-gray-500': !acc.section
+                }">
+                  section: {{ acc.section || 'N/A' }}
+                </span>
+              </div>
+            </div>
+          </details>
+        </div>
+
         <!-- Cost of Sales Table -->
         <Card class="bg-gradient-card shadow-dashboard-lg border-table-border mt-8">
           <CardHeader class="flex items-center justify-between px-4 py-2">
@@ -362,6 +575,82 @@
                     </TableCell>
                     <TableCell class="text-right font-bold py-3">
                       {{ formatCurrency(costOfSalesTotal.total || 0) }}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- Direct Expenses Table -->
+        <Card class="bg-gradient-card shadow-dashboard-lg border-table-border mt-8">
+          <CardHeader class="flex items-center justify-between px-4 py-2">
+            <div class="flex items-center space-x-3">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                @click="minimizeDirectExpenses = !minimizeDirectExpenses"
+                class="p-1"
+              >
+                {{ minimizeDirectExpenses ? '▶' : '▼' }}
+              </Button>
+              <CardTitle class="text-dashboard-header font-bold text-lg">Direct Expenses</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent class="p-0" v-if="!minimizeDirectExpenses">
+            <div class="overflow-x-auto">
+              <Table>
+                <TableHeader class="bg-table-header">
+                  <TableRow class="border-table-border">
+                    <TableHead class="w-auto min-w-[200px] max-w-[800px] border-r border-table-border sticky left-0 bg-table-header z-10 whitespace-nowrap">
+                      Account
+                    </TableHead>
+                    <TableHead 
+                      v-for="period in periodList" 
+                      :key="period.key" 
+                      class="text-center border-r border-table-border bg-red-500/5"
+                    >
+                      <div class="text-dashboard-header font-semibold">{{ period.label }}</div>
+                    </TableHead>
+                    <TableHead class="text-center bg-success/5">
+                      <div class="text-dashboard-header font-semibold">Total</div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <template v-for="row in directExpensesData" :key="row.account || row.account_name">
+                    <TableRow 
+                      v-if="!hideZeroValues || hasData(row)"
+                      :class="getRowClass(row)"
+                    >
+                      <TableCell class="font-medium py-2 border-r border-table-border">
+                        {{ row.account_name || row.account }}
+                      </TableCell>
+                      <TableCell 
+                        v-for="period in periodList" 
+                        :key="period.key"
+                        class="text-right py-2 border-r border-table-border"
+                      >
+                        {{ formatCurrency(row[period.key] || 0) }}
+                      </TableCell>
+                      <TableCell class="text-right font-medium py-2">
+                        {{ formatCurrency(row.total || 0) }}
+                      </TableCell>
+                    </TableRow>
+                  </template>
+                  <!-- Direct Expenses Total -->
+                  <TableRow class="border-t-2 border-red-500 bg-red-500/5 font-bold">
+                    <TableCell class="font-bold py-3 border-r border-table-border">TOTAL DIRECT EXPENSES</TableCell>
+                    <TableCell 
+                      v-for="period in periodList" 
+                      :key="period.key"
+                      class="text-right font-bold py-3 border-r border-table-border"
+                    >
+                      {{ formatCurrency(directExpensesTotal[period.key] || 0) }}
+                    </TableCell>
+                    <TableCell class="text-right font-bold py-3">
+                      {{ formatCurrency(directExpensesTotal.total || 0) }}
                     </TableCell>
                   </TableRow>
                 </TableBody>
@@ -688,6 +977,234 @@
           </CardContent>
         </Card>
 
+        <!-- Indirect Income Table -->
+        <Card class="bg-gradient-card shadow-dashboard-lg border-table-border mt-8">
+          <CardHeader class="flex items-center justify-between px-4 py-2">
+            <div class="flex items-center space-x-3">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                @click="minimizeIndirectIncome = !minimizeIndirectIncome"
+                class="p-1"
+              >
+                {{ minimizeIndirectIncome ? '▶' : '▼' }}
+              </Button>
+              <CardTitle class="text-dashboard-header font-bold text-lg">Indirect Income</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent class="p-0" v-if="!minimizeIndirectIncome">
+            <div class="overflow-x-auto">
+              <Table>
+                <TableHeader class="bg-table-header">
+                  <TableRow class="border-table-border">
+                    <TableHead class="w-auto min-w-[200px] max-w-[800px] border-r border-table-border sticky left-0 bg-table-header z-10 whitespace-nowrap">
+                      Account
+                    </TableHead>
+                    <TableHead 
+                      v-for="period in periodList" 
+                      :key="period.key" 
+                      class="text-center border-r border-table-border bg-green-500/5"
+                    >
+                      <div class="text-dashboard-header font-semibold">{{ period.label }}</div>
+                    </TableHead>
+                    <TableHead class="text-center bg-success/5">
+                      <div class="text-dashboard-header font-semibold">Total</div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <template v-for="row in indirectIncomeData" :key="row.account || row.account_name">
+                    <TableRow 
+                      v-if="!hideZeroValues || hasData(row)"
+                      :class="getRowClass(row)"
+                    >
+                      <TableCell class="font-medium py-2 border-r border-table-border">
+                        {{ row.account_name || row.account }}
+                      </TableCell>
+                      <TableCell 
+                        v-for="period in periodList" 
+                        :key="period.key"
+                        class="text-right py-2 border-r border-table-border"
+                      >
+                        {{ formatCurrency(row[period.key] || 0) }}
+                      </TableCell>
+                      <TableCell class="text-right font-medium py-2">
+                        {{ formatCurrency(row.total || 0) }}
+                      </TableCell>
+                    </TableRow>
+                  </template>
+                  <!-- Indirect Income Total -->
+                  <TableRow class="border-t-2 border-green-500 bg-green-500/5 font-bold">
+                    <TableCell class="font-bold py-3 border-r border-table-border">TOTAL INDIRECT INCOME</TableCell>
+                    <TableCell 
+                      v-for="period in periodList" 
+                      :key="period.key"
+                      class="text-right font-bold py-3 border-r border-table-border"
+                    >
+                      {{ formatCurrency(indirectIncomeTotal[period.key] || 0) }}
+                    </TableCell>
+                    <TableCell class="text-right font-bold py-3">
+                      {{ formatCurrency(indirectIncomeTotal.total || 0) }}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- Indirect Expenses Table -->
+        <Card class="bg-gradient-card shadow-dashboard-lg border-table-border mt-8">
+          <CardHeader class="flex items-center justify-between px-4 py-2">
+            <div class="flex items-center space-x-3">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                @click="minimizeIndirectExpenses = !minimizeIndirectExpenses"
+                class="p-1"
+              >
+                {{ minimizeIndirectExpenses ? '▶' : '▼' }}
+              </Button>
+              <CardTitle class="text-dashboard-header font-bold text-lg">Indirect Expenses</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent class="p-0" v-if="!minimizeIndirectExpenses">
+            <div class="overflow-x-auto">
+              <Table>
+                <TableHeader class="bg-table-header">
+                  <TableRow class="border-table-border">
+                    <TableHead class="w-auto min-w-[200px] max-w-[800px] border-r border-table-border sticky left-0 bg-table-header z-10 whitespace-nowrap">
+                      Account
+                    </TableHead>
+                    <TableHead 
+                      v-for="period in periodList" 
+                      :key="period.key" 
+                      class="text-center border-r border-table-border bg-blue-500/5"
+                    >
+                      <div class="text-dashboard-header font-semibold">{{ period.label }}</div>
+                    </TableHead>
+                    <TableHead class="text-center bg-success/5">
+                      <div class="text-dashboard-header font-semibold">Total</div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <template v-for="row in indirectExpensesData" :key="row.account || row.account_name">
+                    <TableRow 
+                      v-if="!hideZeroValues || hasData(row)"
+                      :class="getRowClass(row)"
+                    >
+                      <TableCell class="font-medium py-2 border-r border-table-border">
+                        {{ row.account_name || row.account }}
+                      </TableCell>
+                      <TableCell 
+                        v-for="period in periodList" 
+                        :key="period.key"
+                        class="text-right py-2 border-r border-table-border"
+                      >
+                        {{ formatCurrency(row[period.key] || 0) }}
+                      </TableCell>
+                      <TableCell class="text-right font-medium py-2">
+                        {{ formatCurrency(row.total || 0) }}
+                      </TableCell>
+                    </TableRow>
+                  </template>
+                  <!-- Indirect Expenses Total -->
+                  <TableRow class="border-t-2 border-blue-500 bg-blue-500/5 font-bold">
+                    <TableCell class="font-bold py-3 border-r border-table-border">TOTAL INDIRECT EXPENSES</TableCell>
+                    <TableCell 
+                      v-for="period in periodList" 
+                      :key="period.key"
+                      class="text-right font-bold py-3 border-r border-table-border"
+                    >
+                      {{ formatCurrency(indirectExpensesTotal[period.key] || 0) }}
+                    </TableCell>
+                    <TableCell class="text-right font-bold py-3">
+                      {{ formatCurrency(indirectExpensesTotal.total || 0) }}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- Indirect Income Table -->
+        <Card class="bg-gradient-card shadow-dashboard-lg border-table-border mt-8">
+          <CardHeader class="flex items-center justify-between px-4 py-2">
+            <div class="flex items-center space-x-3">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                @click="minimizeIndirectIncome = !minimizeIndirectIncome"
+                class="p-1"
+              >
+                {{ minimizeIndirectIncome ? '▶' : '▼' }}
+              </Button>
+              <CardTitle class="text-dashboard-header font-bold text-lg">Indirect Income</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent class="p-0" v-if="!minimizeIndirectIncome">
+            <div class="overflow-x-auto">
+              <Table>
+                <TableHeader class="bg-table-header">
+                  <TableRow class="border-table-border">
+                    <TableHead class="w-auto min-w-[200px] max-w-[800px] border-r border-table-border sticky left-0 bg-table-header z-10 whitespace-nowrap">
+                      Account
+                    </TableHead>
+                    <TableHead 
+                      v-for="period in periodList" 
+                      :key="period.key" 
+                      class="text-center border-r border-table-border bg-green-500/5"
+                    >
+                      <div class="text-dashboard-header font-semibold">{{ period.label }}</div>
+                    </TableHead>
+                    <TableHead class="text-center bg-success/5">
+                      <div class="text-dashboard-header font-semibold">Total</div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <template v-for="row in indirectIncomeData" :key="row.account || row.account_name">
+                    <TableRow 
+                      v-if="!hideZeroValues || hasData(row)"
+                      :class="getRowClass(row)"
+                    >
+                      <TableCell class="font-medium py-2 border-r border-table-border">
+                        {{ row.account_name || row.account }}
+                      </TableCell>
+                      <TableCell 
+                        v-for="period in periodList" 
+                        :key="period.key"
+                        class="text-right py-2 border-r border-table-border"
+                      >
+                        {{ formatCurrency(row[period.key] || 0) }}
+                      </TableCell>
+                      <TableCell class="text-right font-medium py-2">
+                        {{ formatCurrency(row.total || 0) }}
+                      </TableCell>
+                    </TableRow>
+                  </template>
+                  <!-- Indirect Income Total -->
+                  <TableRow class="border-t-2 border-green-500 bg-green-500/5 font-bold">
+                    <TableCell class="font-bold py-3 border-r border-table-border">TOTAL INDIRECT INCOME</TableCell>
+                    <TableCell 
+                      v-for="period in periodList" 
+                      :key="period.key"
+                      class="text-right font-bold py-3 border-r border-table-border"
+                    >
+                      {{ formatCurrency(indirectIncomeTotal[period.key] || 0) }}
+                    </TableCell>
+                    <TableCell class="text-right font-bold py-3">
+                      {{ formatCurrency(indirectIncomeTotal.total || 0) }}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
         <!-- Period Information -->
         <Card>
           <CardHeader>
@@ -769,18 +1286,18 @@ import {
   AlertCircle, 
   ArrowLeft,
   BarChart3,
-  DollarSign,
+  
   TrendingUp,
   PieChart,
   ArrowUpDown
 } from 'lucide-vue-next'
-import testApiService from '../services/testApi'
+// import testApiService from '../services/testApi'
 
 // State
 const loading = ref(false)
 const error = ref(null)
 const dashboardData = ref([])
-const summaryData = ref({})
+const summaryData = ref([])
 const periodList = ref([])
 const showDebug = ref(false)
 const router = useRouter()
@@ -792,10 +1309,19 @@ const maxRows = ref(100)
 
 // Table minimize states
 const minimizeIncome = ref(false)
+const minimizeDirectRevenue = ref(false)
 const minimizeCostOfSales = ref(false)
+const minimizeDirectRevenueDedicated = ref(false)
+const minimizeCostOfSalesDedicated = ref(false)
+const minimizeDirectExpenses = ref(false)
 const minimizeSalariesWages = ref(false)
 const minimizePayrollBurden = ref(false)
 const minimizeOtherExpenses = ref(false)
+const minimizeIndirectIncome = ref(false)
+const minimizeIndirectExpenses = ref(false)
+
+// Placeholder: currency code to be fetched from Company document (e.g., 'GHS', 'USD')
+const companyCurrency = ref(null)
 
 // Filters (ERPNext P&L format)
 const filters = reactive({
@@ -814,23 +1340,50 @@ const filters = reactive({
 // Data section computed properties
 const incomeData = computed(() => {
   if (!dashboardData.value.length) return []
-  // Filter for income accounts based on account structure
-  return dashboardData.value.filter(row => 
-    row.account?.startsWith('400') || 
-    row.account_name?.toLowerCase().includes('income') ||
-    row.account_name?.toLowerCase().includes('revenue')
+  
+  // Debug: Log all income accounts and their section values
+  const allIncomeAccounts = dashboardData.value.filter(row => row.account?.startsWith('400'))
+  console.log('🔍 All income accounts found:', allIncomeAccounts.map(row => ({
+    account: row.account,
+    account_name: row.account_name,
+    section: row.section,
+    is_direct: row.is_direct
+  })))
+  
+  // Filter for direct revenue accounts using section field
+  const directRevenueAccounts = dashboardData.value.filter(row => 
+    // Must be income account (starts with 400)
+    row.account?.startsWith('400') &&
+    // Must be in Direct Revenue section
+    row.section === 'Direct Revenue'
   )
+  
+  console.log('✅ Direct Revenue accounts (section === Direct Revenue):', directRevenueAccounts.map(row => ({
+    account: row.account,
+    account_name: row.account_name,
+    section: row.section
+  })))
+  
+  return directRevenueAccounts
 })
 
 const costOfSalesData = computed(() => {
   if (!dashboardData.value.length) return []
-  // Filter for cost of sales accounts based on account structure
+  // Filter for cost of sales accounts using section field
   return dashboardData.value.filter(row => 
     row.account?.startsWith('500') && 
-    (row.account_name?.toLowerCase().includes('cost') || 
-     row.account_name?.toLowerCase().includes('sales') ||
-     row.account_name?.toLowerCase().includes('food') ||
-     row.account_name?.toLowerCase().includes('beverage'))
+    row.section === 'Cost of Sales'
+  )
+})
+
+const directExpensesData = computed(() => {
+  if (!dashboardData.value.length) return []
+  // Filter for direct expense accounts using section field
+  return dashboardData.value.filter(row => 
+    // Must be expense account (starts with 500)
+    row.account?.startsWith('500') &&
+    // Must be in Direct Expenses section
+    row.section === 'Direct Expenses'
   )
 })
 
@@ -880,6 +1433,51 @@ const otherExpensesData = computed(() => {
   )
 })
 
+// Indirect income and expenses for complete financial picture
+const indirectIncomeData = computed(() => {
+  if (!dashboardData.value.length) return []
+  // Filter for indirect income accounts using section field
+  return dashboardData.value.filter(row => 
+    // Must be income account (starts with 400)
+    row.account?.startsWith('400') &&
+    // Must be in Indirect Revenue section
+    row.section === 'Indirect Revenue'
+  )
+})
+
+// Debug: Show all income accounts and their section values
+const debugIncomeAccounts = computed(() => {
+  if (!dashboardData.value.length) return []
+  return dashboardData.value.filter(row => 
+    row.account?.startsWith('400')
+  ).map(row => ({
+    account: row.account,
+    account_name: row.account_name,
+    section: row.section,
+    is_direct: row.is_direct,
+    total: row.total
+  }))
+})
+
+const indirectExpensesData = computed(() => {
+  if (!dashboardData.value.length) return []
+  // Filter for indirect expense accounts using section field
+  return dashboardData.value.filter(row => 
+    // Must be expense account (starts with 500)
+    row.account?.startsWith('500') &&
+    // Must be in Indirect Expenses section
+    row.section === 'Indirect Expenses'
+  )
+})
+
+const indirectIncomeTotal = computed(() => {
+  return calculateTotals(indirectIncomeData.value, periodList.value)
+})
+
+const indirectExpensesTotal = computed(() => {
+  return calculateTotals(indirectExpensesData.value, periodList.value)
+})
+
 // Total calculations
 const incomeTotal = computed(() => {
   return calculateTotals(incomeData.value, periodList.value)
@@ -887,6 +1485,10 @@ const incomeTotal = computed(() => {
 
 const costOfSalesTotal = computed(() => {
   return calculateTotals(costOfSalesData.value, periodList.value)
+})
+
+const directExpensesTotal = computed(() => {
+  return calculateTotals(directExpensesData.value, periodList.value)
 })
 
 const salariesWagesTotal = computed(() => {
@@ -953,7 +1555,8 @@ const debugInfo = computed(() => ({
   error: error.value,
   hideZeroValues: hideZeroValues.value,
   showIndent: showIndent.value,
-  maxRows: maxRows.value
+  maxRows: maxRows.value,
+  debugIncomeAccounts: debugIncomeAccounts.value
 }))
 
 // Methods
@@ -968,54 +1571,28 @@ const refreshData = async () => {
   try {
     console.log('Loading ERPNext P&L data with filters:', filters)
     
-    // Step 1: Get period list using ERPNext function
-    const periodResponse = await testApiService.testPeriodListGeneration(filters)
-    if (periodResponse.success) {
-      periodList.value = periodResponse.period_list
-    } else {
-      throw new Error('Failed to generate period list')
-    }
+    // Import the API service
+    const apiService = await import('../services/api.js')
     
-    // Step 2: Get complete P&L execution using ERPNext functions
-    const pnlResponse = await testApiService.testCompletePnlExecution(filters)
-    if (pnlResponse.success) {
-      // Extract the actual financial data from the ERPNext response
-      const sampleData = pnlResponse.sample_data
-      if (sampleData) {
-        // Build the complete dataset from ERPNext response
-        const data = []
-        
-        // Add income data
-        if (sampleData.first_income_row) {
-          data.push(sampleData.first_income_row)
-        }
-        
-        // Add expense data
-        if (sampleData.first_expense_row) {
-          data.push(sampleData.first_expense_row)
-        }
-        
-        // Add net profit/loss
-        if (sampleData.net_profit_loss) {
-          data.push(sampleData.net_profit_loss)
-        }
-        
-        dashboardData.value = data
-      } else {
-        dashboardData.value = []
+    // Call the real API to get dashboard data
+    const dashboardResponse = await apiService.default.getDashboardData(filters)
+    
+    if (dashboardResponse && dashboardResponse.dashboard_data) {
+      dashboardData.value = dashboardResponse.dashboard_data
+      console.log('Dashboard data loaded:', dashboardData.value.length, 'rows')
+      
+      // Extract period list if available
+      if (dashboardResponse.period_list) {
+        periodList.value = dashboardResponse.period_list
       }
       
-      // Extract summary data from actual ERPNext values
-      if (pnlResponse.execution_summary) {
-        const sampleData = pnlResponse.sample_data
-        summaryData.value = {
-          total_income: sampleData?.first_income_row?.total || 0,
-          total_expenses: sampleData?.first_expense_row?.total || 0,
-          net_profit: sampleData?.net_profit_loss?.total || 0
-        }
+      // Extract summary data if available
+      if (dashboardResponse.summary_data) {
+        summaryData.value = dashboardResponse.summary_data
       }
     } else {
-      throw new Error('Failed to execute P&L')
+      console.warn('No dashboard data received from API')
+      dashboardData.value = []
     }
     
     console.log('ERPNext P&L data loaded successfully')
@@ -1023,6 +1600,7 @@ const refreshData = async () => {
   } catch (err) {
     console.error('Failed to load ERPNext P&L data:', err)
     error.value = err.message || 'Failed to load ERPNext P&L data'
+    dashboardData.value = []
   } finally {
     loading.value = false
   }
@@ -1093,13 +1671,29 @@ const handleSort = (field) => {
 }
 
 const formatCurrency = (value) => {
-  if (!value || isNaN(value)) return '0.00'
+  if (value === null || value === undefined || isNaN(value)) return '0.00'
+  const numeric = Math.abs(Number(value))
+  // If companyCurrency is available, use it; otherwise render as plain decimal without symbol
+  if (companyCurrency.value) {
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: companyCurrency.value,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(numeric)
+    } catch {
+      // Fallback to plain decimal if invalid currency code
+      return new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(numeric)
+    }
+  }
   return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'GHS',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
-  }).format(Math.abs(value))
+  }).format(numeric)
 }
 
 const formatDate = (dateString) => {
@@ -1116,9 +1710,9 @@ const formatDate = (dateString) => {
 }
 
 // Load initial data
-onMounted(() => {
-  refreshData()
-})
+// onMounted(() => {
+//   refreshData()
+// })
 
 // Development: Enable debug mode with keyboard shortcut
 if (process.env.NODE_ENV === 'development') {
