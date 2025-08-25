@@ -86,6 +86,8 @@ def compute_section_and_flags(acc, inc_gross_map, report_class_direct_map=None):
     # Report class direct flag (from doctype)
     rc_is_direct = bool(report_class_direct_map.get(report_class, False))
 
+
+
     # Determine if this is a cost of sales account
     is_cost_of_sales = (
         root == "Expense" and (
@@ -96,13 +98,60 @@ def compute_section_and_flags(acc, inc_gross_map, report_class_direct_map=None):
         )
     )
 
-    # Determine if this is a direct expense (excluding cost of sales)
-    is_direct_expense = (
-        root == "Expense" and 
-        not is_cost_of_sales and (
-            rc_is_direct or
-            report_class in {"Direct Expenses", "Operational", "Maintenance", "Utilities", "Supplies"}
-        )
+    # Define specific expense categories for proper classification
+    SALARY_EXPENSE_CLASSES = {
+        "Salaries & Wages", "Salary", "Wages", "Payroll"
+    }
+
+    PAYROLL_BURDEN_CLASSES = {
+        "Payroll Burden", "Burden", "Statutory", "Employer",
+        "Social Security", "Provident Fund", "Pension", "SSNIT",
+        "Gratuity", "Severance", "Vacation Pay", "Sick Pay"
+    }
+
+    DIRECT_OPERATIONAL_CLASSES = {
+        "Direct Expenses", "Operational", "Maintenance", "Utilities", "Supplies"
+    }
+
+    # Administrative and overhead expenses (should be Indirect)
+    ADMINISTRATIVE_CLASSES = {
+        "Administrative Expenses", "Admin", "Overhead", "Office",
+        "Marketing", "Advertising", "Professional Fees", "Depreciation",
+        "Amortization", "Insurance", "Rent", "Taxes", "Miscellaneous"
+    }
+
+    # Determine if this is a salary/wages expense
+    is_salary_expense = (
+        root == "Expense" and
+        not is_cost_of_sales and
+        (report_class in SALARY_EXPENSE_CLASSES or
+         "salary" in report_class.lower() or
+         "wage" in report_class.lower())
+    )
+
+    # Determine if this is a payroll burden expense
+    is_payroll_burden = (
+        root == "Expense" and
+        not is_cost_of_sales and
+        any(keyword.lower() in report_class.lower() for keyword in
+            ["burden", "statutory", "employer", "social security", "provident",
+             "pension", "ssnit", "gratuity", "severance", "vacation", "sick"])
+    )
+
+    # Determine if this is a direct operational expense
+    is_direct_operational = (
+        root == "Expense" and
+        not is_cost_of_sales and
+        (rc_is_direct or report_class in DIRECT_OPERATIONAL_CLASSES)
+    )
+
+    # Determine if this is an administrative/overhead expense (Indirect)
+    is_administrative = (
+        root == "Expense" and
+        not is_cost_of_sales and
+        any(keyword.lower() in report_class.lower() for keyword in
+            ["administrative", "admin", "overhead", "office", "marketing",
+             "insurance", "rent", "depreciation", "amortization"])
     )
 
     # Determine if this is direct revenue
@@ -122,9 +171,16 @@ def compute_section_and_flags(acc, inc_gross_map, report_class_direct_map=None):
     elif root == "Expense":
         if is_cost_of_sales:
             return "Cost of Sales", True
-        elif is_direct_expense:
+        elif is_salary_expense:
+            return "Salaries & Wages", True
+        elif is_payroll_burden:
+            return "Payroll Burden", True
+        elif is_direct_operational:
             return "Direct Expenses", True
+        elif is_administrative:
+            return "Indirect Expenses", True
         else:
+            # Only truly uncategorized expenses should default to Indirect Expenses
             return "Indirect Expenses", False
     else:
         return "Other", False
@@ -801,6 +857,9 @@ def get_dashboard_data(filters=None):
     indirect_expense_accounts = []
     for account in expense_hierarchy:
         section, is_direct = compute_section_and_flags(account, inc_gross_map, report_class_direct_map)
+
+
+
         if section == "Cost of Sales":
             cost_of_sales_accounts.append(account)
         elif section == "Direct Expenses":
@@ -1019,7 +1078,8 @@ def get_dashboard_data(filters=None):
                 account_row = process_account_data(
                     account, ytd_gl_entries, ytd_last_year_gl_entries,
                     current_month_gl_entries, current_month_last_year_gl_entries,
-                    [], [], [], []
+                    [], [], [], [],
+                    monthly_actuals_map, fiscal_year, selected_cost_center
                 )
                 if account_row:
                     account_row['indent'] = account.get('indent', 1) + 2
