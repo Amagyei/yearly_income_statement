@@ -1431,8 +1431,30 @@ const loadDashboardData = async () => {
         costOfSalesData.value = costOfSalesResponse
         costOfSalesTotal.value = apiService.calculateTotal(costOfSalesResponse)
       } else {
-        // Fallback: derive from dashboardData canonical structure
-        const derivedCOS = (dashboardData.value || []).filter(r => r?.type === 'account' && r?.section === 'Cost of Sales')
+        // Fallback: derive from dashboardData with improved filtering logic
+        const derivedCOS = (dashboardData.value || []).filter(r => {
+          if (!r || r.type !== 'account' || r.root_type !== 'Expense') return false
+
+          const section = (r.section || '').toString()
+          const accountName = (r.account_name || r.account || '').toString()
+          const reportClass = (r.report_class || '').toString()
+
+          // Primary logic: accounts in Cost of Sales section
+          if (section === 'Cost of Sales') return true
+
+          // Secondary logic: accounts with 'Cost' in name from specific report classes
+          if (accountName.toLowerCase().includes('cost') &&
+              (reportClass === 'Other Cost of Sales' || reportClass === 'Other Expense')) {
+            return true
+          }
+
+          // Tertiary logic: original report class filtering
+          if (['Food', 'Beverage', 'Room', 'Other Costs'].includes(reportClass)) {
+            return true
+          }
+
+          return false
+        })
         costOfSalesData.value = derivedCOS
         costOfSalesTotal.value = apiService.calculateTotal(derivedCOS)
       }
@@ -1456,20 +1478,20 @@ const loadDashboardData = async () => {
         }
       }
 
-      // Derive Salaries & Wages using report_class only
+      // Derive Salaries & Wages using section field
       const salaryAccounts = (dashboardData.value || []).filter(r => {
         if (!r || r.type !== 'account' || r.root_type !== 'Expense') return false
-        const rc = (r.report_class || '').toString()
-        return rc === 'Salaries & Wages' || SALARY_REGEX.test(rc)
+        const section = (r.section || '').toString()
+        return section === 'Salaries & Wages'
       })
       salariesWagesData.value = salaryAccounts
       salariesWagesTotal.value = apiService.calculateTotal(salaryAccounts)
 
-      // Derive Payroll Burden using report_class only
+      // Derive Payroll Burden using section field
       const burdenAccounts = (dashboardData.value || []).filter(r => {
         if (!r || r.type !== 'account' || r.root_type !== 'Expense') return false
-        const rc = (r.report_class || '').toString()
-        return rc === 'Payroll Burden' || PAYROLL_BURDEN_REGEX.test(rc)
+        const section = (r.section || '').toString()
+        return section === 'Payroll Burden'
       })
       
       // Ensure the data has the correct structure for groupByReportClass
@@ -1507,7 +1529,9 @@ const loadDashboardData = async () => {
         const indirectExpensesAccounts = (dashboardData.value || []).filter(r => {
           if (!r || r.type !== 'account' || r.root_type !== 'Expense') return false
           const section = (r.section || '').toString()
-          if (section === 'Cost of Sales' || section === 'Direct Expenses') return false
+          // Exclude all other expense categories - only include true Indirect Expenses
+          if (section === 'Cost of Sales' || section === 'Direct Expenses' ||
+              section === 'Salaries & Wages' || section === 'Payroll Burden') return false
           return section === 'Indirect Expenses'
         })
         
